@@ -23,10 +23,11 @@ import { SessionHistory } from "./components/SessionHistory";
 import { useKeyBindings, KEYBINDINGS_HELP } from "./components/KeyBindings";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { useErrorHandler, ErrorToast } from "./components/ErrorToast";
+import { ImageGenerator } from "./components/ImageGenerator";
 import "./styles/themes.css";
 import "highlight.js/styles/github-dark.css";
 
-type SidebarTab = "files" | "search" | "git" | "sessions";
+type SidebarTab = "files" | "search" | "git" | "sessions" | "image";
 
 interface SessionTab {
   id: string;
@@ -252,6 +253,7 @@ export default function App() {
     { id: "search", label: "Search" },
     { id: "git", label: "Git" },
     { id: "sessions", label: "History" },
+    { id: "image", label: "Gen" },
   ];
 
   return (
@@ -373,6 +375,9 @@ export default function App() {
                     sessionTabs.find((t) => t.id === activeTabId)?.sessionPath
                   }
                 />
+              )}
+              {sidebarTab === "image" && (
+                <ImageGenerator />
               )}
             </Sidebar>
           )}

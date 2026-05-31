@@ -5,6 +5,7 @@ import os from "node:os";
 import { execSync } from "node:child_process";
 import { safePath, getProjectDir } from "./security.js";
 import { isAlive } from "./rpc.js";
+import { generateImage, isComfyUIAvailable } from "./comfyui.js";
 
 function readJson(filePath: string): unknown {
   try {
@@ -289,6 +290,48 @@ export function setupApi(server: http.Server): void {
         return sendJson(branches);
       } catch {
         return sendJson([]);
+      }
+    }
+
+    // GET /api/comfyui/status
+    if (method === "GET" && url.pathname === "/api/comfyui/status") {
+      const available = await isComfyUIAvailable();
+      return sendJson({ available, url: process.env.COMFYUI_URL || "http://127.0.0.1:8188" });
+    }
+
+    // POST /api/comfyui/generate
+    if (method === "POST" && url.pathname === "/api/comfyui/generate") {
+      const body = await readBody(req);
+      const prompt = body.prompt as string;
+      if (!prompt) return sendJson({ error: "prompt required" }, 400);
+      try {
+        const result = await generateImage(prompt, {
+          negativePrompt: body.negativePrompt as string,
+          width: body.width as number,
+          height: body.height as number,
+          steps: body.steps as number,
+          seed: body.seed as number,
+        });
+        return sendJson(result);
+      } catch (e) {
+        return sendJson({ error: (e as Error).message }, 500);
+      }
+    }
+
+    // GET /api/comfyui/image
+    if (method === "GET" && url.pathname === "/api/comfyui/image") {
+      const imgPath = url.searchParams.get("path");
+      if (!imgPath || !fs.existsSync(imgPath)) {
+        res.writeHead(404);
+        return res.end("Not found");
+      }
+      try {
+        const data = fs.readFileSync(imgPath);
+        res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" });
+        return res.end(data);
+      } catch {
+        res.writeHead(500);
+        return res.end("Error");
       }
     }
 
