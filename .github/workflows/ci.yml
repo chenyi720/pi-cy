@@ -35,36 +35,9 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
 
-  build-frontend:
-    name: Build Frontend
-    needs: [lint, typecheck]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-
-  build-rust:
-    name: Build Rust
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-      - run: cargo build
-        working-directory: src-tauri
-      - run: cargo clippy -- -D warnings
-        working-directory: src-tauri
-
   build-desktop:
     name: Build (${{ matrix.platform }})
-    needs: [build-frontend, build-rust]
+    needs: [lint, typecheck]
     strategy:
       fail-fast: false
       matrix:
@@ -84,6 +57,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - uses: actions/setup-node@v4
         with:
           node-version: 22
