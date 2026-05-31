@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PI-CY - Desktop AI Coding Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=10.0">
+</head>
+<body>
+<div class="app">
+  <!-- Active Three-Column Layout (files-view) -->
+  <div id="files-view">
+
+    <!-- Column 1: Left Sidebar (hidden by default, shown on project set) -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title-row">
+          <span class="sidebar-title">Pi Agent Web</span>
+          <div class="sidebar-header-actions">
+            <button class="btn btn-sm" id="btn-new" title="新建对话">+ New</button>
+            <button class="btn btn-sm icon-btn" id="btn-refresh" title="刷新文件列表">↻</button>
+          </div>
+        </div>
+        <div class="project-bubble" id="project-path-bubble" title="点击更改项目目录">
+          <span class="project-bubble-text" id="project-name-bubble">(未指定项目)</span>
+        </div>
+      </div>
+
+      <div class="files-sidebar-tabs">
+        <button class="fs-tab active" id="fstab-files" onclick="switchSidebarTab('files')">Explorer</button>
+        <button class="fs-tab" id="fstab-search" onclick="switchSidebarTab('search')">Search</button>
+      </div>
+      <div id="files-path" style="display:none;"></div>
+
+      <div id="sidebar-files-container" class="sidebar-scroll-container">
+        <div class="sidebar-section-title">Sessions</div>
+        <div class="sb-list" id="session-list"></div>
+        <div class="sidebar-section-title">
+          Explorer
+          <button class="btn btn-sm btn-accent" id="btn-sidebar-rules" style="padding: 2px 6px; font-size: 10px; font-weight: 600;" title="编辑自定义提示词规则 (.roorules)">Rules</button>
+        </div>
+        <div class="files-tree" id="files-tree"></div>
+      </div>
+
+      <div id="sidebar-search-container" class="sidebar-scroll-container" style="display:none; padding:12px 10px;">
+        <div style="display:flex; gap:6px; margin-bottom:12px;">
+          <input type="text" id="search-input" placeholder="在项目内查找字符..." style="flex:1; padding:5px 8px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--r); color:var(--txt); font-size:11.5px; outline:none; font-family:inherit;" />
+          <button class="btn btn-accent" onclick="performSearch()">查找</button>
+        </div>
+        <div id="search-results" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+          <div style="color:var(--txt-muted); font-size:11px; text-align:center; padding-top:20px;">输入关键词点击查找</div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="sidebar-footer-btn" id="btn-footer-settings" title="配置大模型">Models</button>
+        <button class="sidebar-footer-btn" id="btn-footer-skills" title="查看当前能力">Skills</button>
+      </div>
+    </aside>
+
+    <!-- Left resizer drag line -->
+    <div id="resizer-left" class="pane-resizer-bar" style="display:none"></div>
+
+    <!-- Column 2: Center Pane (AI Assistant panel) -->
+    <div class="center-pane">
+      <div class="center-header">
+        <div class="header-left">
+          <button class="icon-btn" id="btn-toggle-sidebar" title="收起/展开侧栏">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-theme" title="切换主题">
+            <span id="theme-icon">🌙</span>
+          </button>
+          <div class="header-badge" id="badge-branches">
+            🌿 default <span class="badge-chevron">▼</span>
+          </div>
+          <div class="header-badge" id="badge-system">
+            <span class="dot" id="dot"></span>&nbsp;<span id="status-text" style="font-size: 10px;">连接中</span>&nbsp;<span class="badge-chevron">▼</span>
+          </div>
+        </div>
+        
+        <div class="center-tabs">
+          <button class="tab active" data-tab="chat">对话</button>
+          <button class="tab" data-tab="plan">计划</button>
+          <button class="tab" data-tab="tasks">任务</button>
+          <button class="tab" data-tab="report">报告</button>
+          <button class="tab" data-tab="terminal">终端</button>
+        </div>
+        
+        <div class="header-right">
+          <button class="icon-btn" id="btn-toggle-editor" title="收起/展开编辑器">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M1.5 1.5A.5.5 0 0 0 1 2v12a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5V2a.5.5 0 0 0-.5-.5h-13zM0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm11.5 5.5v1h3v-1h-3zM14.5 6v-1h-3v1h3zm-3 3.5v1h3v-1h-3zm3 2v1h-3v-1h3zM10 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8V1z"/></svg>
+          </button>
+        </div>
+      </div>
+      
+      <div class="panels">
+        <!-- Chat Pane -->
+        <div class="panel active" id="p-chat">
+          <!-- Welcome State (Codex-style) -->
+          <div class="chat-empty" id="chat-empty">
+            <div class="welcome-heading">我们该做什么？</div>
+            <div class="welcome-sub">我可以帮你写代码、调试、解释逻辑，或者任何编程相关的事</div>
+            <div class="welcome-quick-actions">
+              <button class="quick-action" onclick="sendQuickPrompt('帮我解释这段代码的逻辑')">
+                <span class="qa-icon">📖</span>
+                <span class="qa-label">解释代码</span>
+              </button>
+              <button class="quick-action" onclick="sendQuickPrompt('帮我修复这个 bug')">
+                <span class="qa-icon">🔧</span>
+                <span class="qa-label">修复问题</span>
+              </button>
+              <button class="quick-action" onclick="sendQuickPrompt('帮我写一个新功能')">
+                <span class="qa-icon">✨</span>
+                <span class="qa-label">新功能</span>
+              </button>
+              <button class="quick-action" onclick="sendQuickPrompt('帮我写测试')">
+                <span class="qa-icon">🧪</span>
+                <span class="qa-label">写测试</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="chat-msgs" id="chat-msgs" style="display: none;"></div>
+          
+          <!-- System execution log console drawer -->
+          <div class="log-console" id="log-console" style="height:32px; flex-shrink:0;">
+            <div class="log-console-header">
+              <span style="font-size:11px; font-weight:600; color:var(--txt-secondary); display:flex; align-items:center; gap:6px;">⌨ 系统运行日志 <span id="log-badge" style="background:var(--accent); color:#fff; font-size:9.5px; padding:1px 5px; border-radius:10px; display:none;">0</span></span>
+              <span id="log-toggle-icon" style="font-size:10px; color:var(--txt-muted);">▲ 展开</span>
+            </div>
+            <div class="log-console-body" id="log-console-body" style="height: 188px; overflow-y:auto; padding:10px 16px; font-family:'JetBrains Mono', monospace; font-size:10.5px; color:#a3e635;">
+              <div style="color:var(--txt-muted);">[系统] 正在等待子进程事件...</div>
+            </div>
+          </div>
+
+          <!-- Capsule Chat Input -->
+          <div class="chat-input-wrapper">
+            <div class="chat-box">
+              <textarea id="chat-input" placeholder="Message..." rows="1"></textarea>
+              <button class="btn-send" id="btn-send" title="发送 (Enter)">➤</button>
+            </div>
+            <div class="chat-pills">
+              <div class="pills-left">
+                <button class="pill-btn" title="添加图片">🖼️</button>
+                <button class="pill-btn" id="btn-settings" title="模型配置">⚙️</button>
+                <span class="pill-badge" id="chat-model-badge">loading...</span>
+                <span class="pill-badge badge-dim">auto</span>
+                <span class="pill-badge badge-dim">default</span>
+                <span class="pill-badge badge-dim">Compact</span>
+              </div>
+              <div class="pills-right">
+                <span class="stream-st" id="stream-st"></span>
+                <button class="pill-btn" title="语音合成 (TTS)">🔊</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Plan Pane -->
+        <div class="panel" id="p-plan">
+          <div class="empty" id="plan-empty">
+            <div class="empty-icon">📋</div>
+            <h3>暂无实施计划</h3>
+            <p>指定项目目录后，PI 将自动生成并呈现 implementation_plan.md</p>
+          </div>
+          <div id="plan-view" style="display:none; height:100%; flex-direction:column;">
+            <div class="panel-header">
+              <h2 id="plan-title">实施计划</h2>
+              <div><button class="btn btn-accent btn-sm" id="btn-gen-tasks">一键生成任务</button></div>
+            </div>
+            <div class="md-view" id="plan-body"></div>
+          </div>
+        </div>
+        
+        <!-- Tasks Pane -->
+        <div class="panel" id="p-tasks">
+          <div class="empty" id="tasks-empty">
+            <div class="empty-icon">✅</div>
+            <h3>暂无任务清单</h3>
+            <p>可在"实施计划"页一键生成任务，或在此手动添加</p>
+          </div>
+          <div id="tasks-view" style="display:none; height:100%; flex-direction:column;">
+            <div class="tasks-bar">
+              <h2>任务清单</h2>
+              <div class="progress">
+                <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+                <span id="progress-text" style="font-size:11px;color:var(--txt-muted)">0/0</span>
+              </div>
+            </div>
+            <div class="tasks-list" id="tasks-list"></div>
+            <div class="tasks-actions">
+              <button class="btn btn-sm" id="btn-add-task">+ 新增任务</button>
+              <button class="btn btn-accent btn-sm" id="btn-execute">执行未完成任务</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Report Pane -->
+        <div class="panel" id="p-report">
+          <div class="empty" id="report-empty">
+            <div class="empty-icon">📄</div>
+            <h3>暂无项目报告</h3>
+            <p>完成所有任务后自动呈现 walkthrough.md 报告</p>
+          </div>
+          <div id="report-view" style="display:none; height:100%; flex-direction:column;">
+            <div class="panel-header"><h2>项目报告</h2></div>
+            <div class="md-view" id="report-body"></div>
+          </div>
+        </div>
+ 
+        <!-- Command Terminal Pane -->
+        <div class="panel" id="p-terminal">
+          <div class="panel-header">
+            <h2>运行终端</h2>
+            <div style="font-size:10.5px; color:var(--txt-muted); font-family: 'JetBrains Mono', monospace;" id="terminal-cwd-badge">CWD: loading...</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; overflow:hidden; padding:12px 16px;">
+            <!-- CRT Screen Output -->
+            <div id="terminal-screen">
+              <div>[Terminal] 终端环境已就绪。输入指令并点击运行以执行 shell 命令...</div>
+            </div>
+            <!-- Action buttons and input line -->
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input type="text" id="terminal-input" placeholder="输入任意 shell 命令 (如: dir 或 npm test)..." style="flex:1; padding:6px 10px; background:var(--bg-sidebar); border:1px solid var(--border); border-radius:var(--r); color:var(--txt); font-size:11.5px; outline:none; font-family:inherit;" />
+              <button class="btn btn-accent btn-sm" id="btn-terminal-run">运行</button>
+              <button class="btn" id="btn-terminal-kill" style="border-color:var(--red); color:var(--red); display:none;">中断</button>
+            </div>
+          </div>
+        </div>
+ 
+        <!-- Compatibility Tab panel element -->
+        <div id="p-files" style="display:none;"></div>
+      </div>
+    </div>
+ 
+    <!-- Right resizer drag line -->
+    <div id="resizer-right" class="pane-resizer-bar" style="display:none"></div>
+ 
+    <!-- Column 3: Right Editor Pane -->
+    <div class="right-pane" style="display:none">
+      <div class="editor-header">
+        <div class="editor-header-left">
+          <span class="editor-tab-title active" id="active-file-title">未选择文件</span>
+        </div>
+        <div class="editor-header-right">
+          <button class="btn btn-accent btn-sm" id="btn-save-file" style="display:none;">保存 (Ctrl+S)</button>
+          <button class="icon-btn" title="拆分视图">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13zM1.5 1a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 .5.5H8V1H1.5zm7 13h6a.5.5 0 0 0 .5-.5v-13a.5.5 0 0 0-.5-.5H8.5v14z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="editor-wrapper">
+        <div class="empty-editor" id="empty-editor">
+          <div class="empty-editor-icon">No file open</div>
+        </div>
+        <textarea id="file-editor" style="display:none;" spellcheck="false"></textarea>
+      </div>
+    </div>
+ 
+  </div>
+</div>
+ 
+<!-- Settings Modal Dialog -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <div class="modal-h"><h2>配置设置</h2><button class="btn btn-sm" id="close-settings">✕</button></div>
+    <div class="modal-b">
+      <div class="status"><span class="dot" id="s-dot"></span><span id="s-status">检查中...</span></div>
+      <div class="srow"><div><div class="slabel">LLM 提供商 (Provider)</div><div class="sdesc">选择大模型适配接口</div></div>
+        <select id="s-provider">
+          <option value="xiaomi-token-plan-cn">xiaomi-token-plan-cn</option>
+          <option value="llama-cpp">llama-cpp (本地)</option>
+          <option value="openai">openai</option>
+          <option value="anthropic">anthropic</option>
+          <option value="google">google</option>
+          <option value="deepseek">deepseek</option>
+        </select>
+      </div>
+      <div class="srow"><div><div class="slabel">模型名称 (Model ID)</div><div class="sdesc">要调用的模型名称标识</div></div><input id="s-model"></div>
+      <div class="srow"><div><div class="slabel">思维链强度 (Thinking Level)</div><div class="sdesc">设定推理级别</div></div>
+        <select id="s-think">
+          <option value="off">off (关闭)</option>
+          <option value="minimal">minimal</option>
+          <option value="low">low</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+          <option value="xhigh">xhigh</option>
+        </select>
+      </div>
+      <div class="srow" style="flex-direction: column; align-items: stretch; gap: 6px;">
+        <div>
+          <div class="slabel">自定义系统提示词 (System Prompt Override)</div>
+          <div class="sdesc">留空使用内置默认提示词</div>
+        </div>
+        <textarea id="s-sysprompt" rows="3" style="width: 100%; padding: 6px; background: var(--bg-sidebar); border: 1px solid var(--border); border-radius: var(--r); color: var(--txt); font-size: 11.5px; outline: none; resize: vertical; font-family: inherit;"></textarea>
+      </div>
+      <div class="hint">这些设置将写入 <code>~/.pi/agent/settings.json</code>，并与全局 `pi` CLI 命令直接共享。</div>
+    </div>
+    <div class="modal-f"><button class="btn btn-accent" id="save-settings">保存并重启进程</button></div>
+  </div>
+</div>
+
+<!-- Project Directory Picker Modal -->
+<div class="modal-overlay" id="project-modal">
+  <div class="modal" style="width: 500px;">
+    <div class="modal-h"><h2>选择项目目录</h2><button class="btn btn-sm" id="close-project-modal">✕</button></div>
+    <div class="modal-b">
+      <div class="srow" style="flex-direction: column; align-items: stretch; gap: 6px;">
+        <div class="slabel">项目路径</div>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="project-path-input" placeholder="例如: C:/Users/admin/Desktop/my-project" style="flex:1;">
+          <button class="btn btn-accent btn-sm" id="btn-confirm-project">确认</button>
+        </div>
+        <div class="sdesc">输入或粘贴项目的绝对路径，支持正斜杠 (/) 和反斜杠 (\)</div>
+      </div>
+      <div id="recent-projects" style="margin-top: 12px;"></div>
+      <div class="hint">提示: 可以从文件资源管理器地址栏复制路径</div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx --package ecc-universal ecc loop-status --json)",
+      "Read(//c/Users/admin/.claude/skills/**)",
+      "Read(//c/Users/admin/.claude/agents/**)"
+    ]
+  }
+}

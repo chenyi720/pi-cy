@@ -1,0 +1,17 @@
+{
+  "name": "pi-agent-cy",
+  "version": "1.1.0",
+  "description": "PI-CY - AI Coding Assistant powered by mimo-v2.5-pro",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "author": "PI Agent Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.2.1",
+    "playwright": "^1.60.0",
+    "ws": "^8.21.0"
+  }
+}
