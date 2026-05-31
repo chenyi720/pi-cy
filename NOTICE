@@ -1,0 +1,27 @@
+PI-CY
+Copyright 2026 PI-CY Community
+
+This product includes software developed by the PI-CY Community.
+Licensed under the Apache License, Version 2.0.
+
+This product depends on the following third-party software:
+
+- Pi Agent Harness (https://github.com/earendil-works/pi)
+  Copyright (c) 2025 Mario Zechner / Earendil Works
+  Licensed under the MIT License.
+
+- Tauri (https://tauri.app)
+  Copyright (c) 2019-2026 Tauri Apps Contributors
+  Licensed under the MIT License or Apache License 2.0.
+
+- React (https://react.dev)
+  Copyright (c) Meta Platforms, Inc. and affiliates
+  Licensed under the MIT License.
+
+- Vite (https://vitejs.dev)
+  Copyright (c) 2019-present Evan You & Vite Contributors
+  Licensed under the MIT License.
+
+- Tailwind CSS (https://tailwindcss.com)
+  Copyright (c) Tailwind Labs, Inc.
+  Licensed under the MIT License.
