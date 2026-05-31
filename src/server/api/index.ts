@@ -39,14 +39,18 @@ function parseWorktreeList(raw: string): Array<{ path: string; head: string; bra
   let current: Record<string, string> = {};
   for (const line of raw.split("\n")) {
     if (!line.trim()) {
-      if (current.path) worktrees.push(current as any);
+      if (current.path) {
+        worktrees.push({ path: current.path, head: current.head ?? "", branch: current.branch ?? "" });
+      }
       current = {};
       continue;
     }
     const [key, ...rest] = line.split(" ");
     current[key] = rest.join(" ");
   }
-  if (current.path) worktrees.push(current as any);
+  if (current.path) {
+    worktrees.push({ path: current.path, head: current.head ?? "", branch: current.branch ?? "" });
+  }
   return worktrees;
 }
 
@@ -170,7 +174,7 @@ export function setupApi(server: http.Server): void {
           try {
             const obj = JSON.parse(trimmed);
             if (obj.type === "message") messages.push(obj.message);
-          } catch {}
+          } catch { /* ignore */ }
         }
         return sendJson({ messages });
       } catch (e) {
@@ -228,7 +232,7 @@ export function setupApi(server: http.Server): void {
         });
         const worktrees = parseWorktreeList(raw);
         return sendJson(worktrees);
-      } catch (e) {
+      } catch {
         return sendJson([]);
       }
     }
@@ -305,7 +309,7 @@ export function setupApi(server: http.Server): void {
   });
 }
 
-function readBody(req: http.IncomingMessage): Promise<any> {
+function readBody(req: http.IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resolve) => {
     let body = "";
     req.on("data", (chunk) => (body += chunk));

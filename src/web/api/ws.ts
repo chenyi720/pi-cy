@@ -19,7 +19,7 @@ export function connectWs(): WebSocket {
     try {
       const msg = JSON.parse(event.data as string) as Record<string, unknown>;
       for (const handler of handlers) handler(msg);
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   return ws;

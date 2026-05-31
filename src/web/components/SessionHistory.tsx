@@ -43,7 +43,7 @@ export function SessionHistory({ onLoadSession, currentSessionPath }: Props) {
         method: "DELETE",
       });
       refresh();
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   const filtered = sessions.filter(
@@ -71,7 +71,7 @@ export function SessionHistory({ onLoadSession, currentSessionPath }: Props) {
             Sessions
           </div>
           <button onClick={refresh} className="text-xs text-gray-400 hover:text-gray-600 px-1">
-            {loading ? "..." : "↻"}
+            {loading ? "..." : "?"}
           </button>
         </div>
         <input
@@ -103,8 +103,7 @@ export function SessionHistory({ onLoadSession, currentSessionPath }: Props) {
                   className="text-gray-400 hover:text-red-500 text-xs ml-1 shrink-0"
                   title="Delete"
                 >
-                  ✕
-                </button>
+                  �?                </button>
               </div>
               <div className="flex items-center gap-2 mt-0.5 text-[10px] text-gray-400">
                 <span>{formatDate(s.modified)}</span>

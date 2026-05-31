@@ -107,7 +107,7 @@ export function killPi(): void {
   if (piProc) {
     try {
       piProc.kill();
-    } catch {}
+    } catch { /* already dead */ }
     piProc = null;
   }
 }

@@ -38,7 +38,7 @@ const state: ChatState = {
   error: null,
 };
 
-let listeners = new Set<() => void>();
+const listeners = new Set<() => void>();
 
 function emitChange(): void {
   for (const l of listeners) l();

@@ -90,7 +90,7 @@ export default function App() {
         setSessionTabs((prev) => [...prev, { id, name, sessionPath }]);
         setActiveTabId(id);
       }
-    } catch {}
+    } catch { /* ignore */ }
   }, []);
 
   const handleCloseTab = useCallback(
@@ -243,7 +243,7 @@ export default function App() {
     });
 
     return unsub;
-  }, [workspacePath]);
+  }, [workspacePath, addError]);
 
   const fileName = openFile?.path.split(/[/\\]/).pop() || "";
 
@@ -284,8 +284,7 @@ export default function App() {
                       }}
                       className="ml-1 text-[10px] opacity-60 hover:opacity-100"
                     >
-                      âœ•
-                    </button>
+                      âœ?                    </button>
                   )}
                 </div>
               ))}
@@ -396,8 +395,7 @@ export default function App() {
                     onClick={() => setOpenFile(null)}
                     className="text-gray-400 hover:text-gray-600 text-xs ml-2"
                   >
-                    âœ•
-                  </button>
+                    âœ?                  </button>
                 </div>
                 <div className="flex-1">
                   {fileLoading ? (
