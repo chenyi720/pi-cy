@@ -30,7 +30,9 @@ export function TerminalPanel() {
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(termRef.current);
-    fitAddon.fit();
+    requestAnimationFrame(() => {
+      try { fitAddon.fit(); } catch { /* container not ready */ }
+    });
 
     xtermRef.current = term;
     fitRef.current = fitAddon;
@@ -74,7 +76,9 @@ export function TerminalPanel() {
     setConnected(true);
     term.write("$ ");
 
-    const handleResize = () => fitAddon.fit();
+    const handleResize = () => {
+      try { fitAddon.fit(); } catch { /* ignore */ }
+    };
     window.addEventListener("resize", handleResize);
 
     return () => {

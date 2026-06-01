@@ -101,7 +101,7 @@ export function setupApi(server: http.Server): void {
     // GET /api/models
     if (method === "GET" && url.pathname === "/api/models") {
       try {
-        const raw = execSync("pi --list-models", {
+        const raw = execSync("pi --list-models 2>&1", {
           encoding: "utf-8",
           timeout: 15000,
           windowsHide: true,
@@ -332,8 +332,8 @@ export function setupApi(server: http.Server): void {
       if (!safeSearchPath) return sendJson([]);
       try {
         const raw = execSync(
-          `rg --no-heading -n -i --max-count=5 "${q.replace(/"/g, '\\"')}" "${safeSearchPath}"`,
-          { encoding: "utf-8", timeout: 10000, windowsHide: true },
+          `findstr /S /N /I /C:"${q.replace(/"/g, '')}" "${safeSearchPath}\\*.ts" "${safeSearchPath}\\*.tsx" "${safeSearchPath}\\*.js" "${safeSearchPath}\\*.jsx"`,
+          { encoding: "utf-8", timeout: 15000, windowsHide: true },
         );
         const results: Array<{ path: string; file: string; line: number; text: string }> = [];
         for (const line of raw.split("\n")) {
