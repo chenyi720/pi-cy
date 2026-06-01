@@ -344,7 +344,7 @@ export default function App() {
               className="hover:text-gray-600"
               title="\u5feb\u6377\u952e (Ctrl+/)"
             >
-              ?
+              \u5feb\u6377\u952e
             </button>
             <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
             {connected ? "已连接" : "未连接"}
