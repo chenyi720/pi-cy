@@ -174,12 +174,12 @@ export async function generateImage(
   return { imagePath: outPath, seed: (workflow["3"] as { inputs: { seed: number } }).inputs.seed };
 }
 
-export function isComfyUIAvailable(): boolean {
+export async function isComfyUIAvailable(): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     http
       .get(`${COMFYUI_URL}/system_stats`, { timeout: 3000 }, (res) => {
         resolve(res.statusCode === 200);
       })
-      .on("error", () => resolve(false)) as unknown as http.ClientRequest;
-  }) as unknown as boolean;
+      .on("error", () => resolve(false));
+  });
 }

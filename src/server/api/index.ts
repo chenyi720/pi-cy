@@ -321,12 +321,22 @@ export function setupApi(server: http.Server): void {
     // GET /api/comfyui/image
     if (method === "GET" && url.pathname === "/api/comfyui/image") {
       const imgPath = url.searchParams.get("path");
-      if (!imgPath || !fs.existsSync(imgPath)) {
+      if (!imgPath) {
         res.writeHead(404);
         return res.end("Not found");
       }
+      const safeImgPath = safePath(imgPath);
+      if (!safeImgPath || !fs.existsSync(safeImgPath)) {
+        res.writeHead(404);
+        return res.end("Not found");
+      }
+      const generatedDir = path.resolve(path.join(process.cwd(), "media", "generated"));
+      if (!safeImgPath.startsWith(generatedDir + path.sep)) {
+        res.writeHead(403);
+        return res.end("Forbidden");
+      }
       try {
-        const data = fs.readFileSync(imgPath);
+        const data = fs.readFileSync(safeImgPath);
         res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" });
         return res.end(data);
       } catch {
