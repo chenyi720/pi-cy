@@ -10,6 +10,9 @@ import { getToolSchemas, executeTool } from "../tools/index.js";
 import { isMcpInitialized, getDiscoveredMcpTools } from "../mcp/index.js";
 import { getLoadedSkills, invokeSkill } from "../skills/index.js";
 import { getAllHooks, executeHooks } from "../hooks/index.js";
+import { createPlan, getAllPlans, updateStepStatus } from "../plan/index.js";
+import { spawnAgent, getAllAgentInstances, getAllAgentDefinitions } from "../agents/index.js";
+import { createTask, getAllTasks, startTask, cancelTask } from "../tasks/index.js";
 
 function readJson(filePath: string): unknown {
   try {
@@ -194,6 +197,80 @@ export function setupApi(server: http.Server): void {
         (body.context || {}) as Record<string, string>,
       );
       return sendJson({ results });
+    }
+
+    // GET /api/plans
+    if (method === "GET" && url.pathname === "/api/plans") {
+      return sendJson(getAllPlans());
+    }
+
+    // POST /api/plans
+    if (method === "POST" && url.pathname === "/api/plans") {
+      const body = await readBody(req);
+      const title = body.title as string;
+      const steps = body.steps as string[];
+      if (!title || !steps) return sendJson({ error: "title and steps required" }, 400);
+      const plan = createPlan(title, body.description as string || "", steps);
+      return sendJson(plan);
+    }
+
+    // POST /api/plans/:id/step
+    if (method === "POST" && url.pathname?.startsWith("/api/plans/") && url.pathname.endsWith("/step")) {
+      const body = await readBody(req);
+      const planId = url.pathname.split("/")[3];
+      const stepId = body.stepId as string;
+      const status = body.status as string;
+      if (!planId || !stepId || !status) return sendJson({ error: "planId, stepId, status required" }, 400);
+      updateStepStatus(planId, stepId, status as "pending" | "in_progress" | "completed" | "failed", body.result as string, body.error as string);
+      return sendJson({ ok: true });
+    }
+
+    // GET /api/agents
+    if (method === "GET" && url.pathname === "/api/agents") {
+      return sendJson({
+        definitions: getAllAgentDefinitions(),
+        instances: getAllAgentInstances(),
+      });
+    }
+
+    // POST /api/agents/spawn
+    if (method === "POST" && url.pathname === "/api/agents/spawn") {
+      const body = await readBody(req);
+      const defName = (body.definition as string) || "general";
+      const task = body.task as string;
+      if (!task) return sendJson({ error: "task required" }, 400);
+      const instance = spawnAgent(defName, task);
+      if (!instance) return sendJson({ error: "agent definition not found" }, 404);
+      return sendJson(instance);
+    }
+
+    // GET /api/tasks
+    if (method === "GET" && url.pathname === "/api/tasks") {
+      return sendJson(getAllTasks());
+    }
+
+    // POST /api/tasks
+    if (method === "POST" && url.pathname === "/api/tasks") {
+      const body = await readBody(req);
+      const name = body.name as string;
+      const command = body.command as string;
+      if (!name || !command) return sendJson({ error: "name and command required" }, 400);
+      const task = createTask(name, command, body.schedule as "once" | "once" || "once", body.cron as string);
+      return sendJson(task);
+    }
+
+    // POST /api/tasks/:id/start
+    if (method === "POST" && url.pathname?.match(/^\/api\/tasks\/[^/]+\/start$/)) {
+      const taskId = url.pathname.split("/")[3];
+      const started = startTask(taskId);
+      return sendJson({ ok: started });
+    }
+
+    // POST /api/tasks/:id/cancel
+    if (method === "POST" && url.pathname?.match(/^\/api\/tasks\/[^/]+\/cancel$/)) {
+      const taskId = url.pathname.split("/")[3];
+      const cancelled = cancelTask(taskId);
+      return sendJson({ ok: cancelled });
     }
 
     // GET /api/files
