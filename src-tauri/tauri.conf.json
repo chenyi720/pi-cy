@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "PI-CY - AI Coding Assistant",
         "width": 1280,
         "height": 800,
