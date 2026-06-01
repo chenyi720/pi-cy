@@ -46,7 +46,11 @@ export function startAgent(opts: {
 }
 
 export function sendPrompt(text: string): void {
-  sendWs({ type: "pi", cmd: { type: "user_input", text } });
+  sendWs({ type: "chat", text });
+}
+
+export function sendChat(text: string, image?: string, mimeType?: string): void {
+  sendWs({ type: "chat", text, image, mimeType });
 }
 
 export function killAgent(): void {

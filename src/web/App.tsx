@@ -240,6 +240,19 @@ export default function App() {
             assistantIdRef.current = null;
           }
           break;
+        case "image_generated": {
+          const imgPath = msg.imagePath as string;
+          const seed = msg.seed as number;
+          if (imgPath) {
+            const id = addAssistantMessageStart();
+            updateAssistantMessage(
+              id,
+              `![Generated Image](/api/comfyui/image?path=${encodeURIComponent(imgPath)})\n\nSeed: ${seed}`,
+            );
+            finalizeAssistantMessage(id);
+          }
+          break;
+        }
       }
     });
 
