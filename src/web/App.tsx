@@ -26,10 +26,11 @@ import { ThemeToggle } from "./components/ThemeToggle";
 import { useErrorHandler, ErrorToast } from "./components/ErrorToast";
 import { ImageGenerator } from "./components/ImageGenerator";
 import { ModelSelector } from "./components/ModelSelector";
+import { TerminalPanel } from "./components/TerminalPanel";
 import "./styles/themes.css";
 import "highlight.js/styles/github-dark.css";
 
-type SidebarTab = "files" | "search" | "git" | "sessions" | "image";
+type SidebarTab = "files" | "search" | "git" | "sessions" | "image" | "terminal";
 
 interface SessionTab {
   id: string;
@@ -275,11 +276,12 @@ export default function App() {
   const fileName = openFile?.path.split(/[/\\]/).pop() || "";
 
   const sidebarTabs: Array<{ id: SidebarTab; label: string }> = [
-    { id: "files", label: "文件" },
-    { id: "search", label: "搜索" },
+    { id: "files", label: "\u6587\u4ef6" },
+    { id: "search", label: "\u641c\u7d22" },
     { id: "git", label: "Git" },
-    { id: "sessions", label: "历史" },
-    { id: "image", label: "生图" },
+    { id: "sessions", label: "\u5386\u53f2" },
+    { id: "image", label: "\u751f\u56fe" },
+    { id: "terminal", label: "\u7ec8\u7aef" },
   ];
 
   return (
@@ -405,6 +407,9 @@ export default function App() {
               )}
               {sidebarTab === "image" && (
                 <ImageGenerator />
+              )}
+              {sidebarTab === "terminal" && (
+                <TerminalPanel />
               )}
             </Sidebar>
           )}
