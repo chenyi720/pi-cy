@@ -522,6 +522,30 @@ export function setupApi(server: http.Server): void {
       }
     }
 
+    // GET /api/comfyui/history
+    if (method === "GET" && url.pathname === "/api/comfyui/history") {
+      try {
+        const outputDir = path.join(process.cwd(), "media", "generated");
+        if (!fs.existsSync(outputDir)) {
+          return sendJson([]);
+        }
+        const files = fs.readdirSync(outputDir);
+        const metaFiles = files.filter((f) => f.endsWith(".json") && f.startsWith("pi-cy-"));
+        const history = metaFiles.map((f) => {
+          try {
+            const content = fs.readFileSync(path.join(outputDir, f), "utf-8");
+            return JSON.parse(content);
+          } catch {
+            return null;
+          }
+        }).filter(Boolean);
+        history.sort((a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0));
+        return sendJson(history);
+      } catch (e) {
+        return sendJson({ error: (e as Error).message }, 500);
+      }
+    }
+
     // GET /api/comfyui/image
     if (method === "GET" && url.pathname === "/api/comfyui/image") {
       const imgPath = url.searchParams.get("path");

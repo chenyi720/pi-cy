@@ -179,7 +179,23 @@ export async function generateImage(
   const outPath = path.join(outputDir, outFilename);
   fs.writeFileSync(outPath, imageBuffer);
 
-  return { imagePath: outPath, seed: (workflow["3"] as { inputs: { seed: number } }).inputs.seed };
+  const actualSeed = (workflow["3"] as { inputs: { seed: number } }).inputs.seed;
+
+  const metaFilename = outFilename.replace(".png", ".json");
+  const metaPath = path.join(outputDir, metaFilename);
+  const metadata = {
+    prompt,
+    negativePrompt: options.negativePrompt || "",
+    width: options.width || 1024,
+    height: options.height || 1024,
+    steps: options.steps || 0,
+    seed: actualSeed,
+    timestamp: Date.now(),
+    imagePath: outPath,
+  };
+  fs.writeFileSync(metaPath, JSON.stringify(metadata, null, 2), "utf-8");
+
+  return { imagePath: outPath, seed: actualSeed };
 }
 
 export async function isComfyUIAvailable(): Promise<boolean> {
