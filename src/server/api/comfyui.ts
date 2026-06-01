@@ -62,7 +62,7 @@ function buildWorkflow(prompt: string, negativePrompt = "", width = 1024, height
         preview_every: 4,
         keep_image1_aspect: false,
         force_offload: false,
-        image: "0",
+        image: {"image": "0"},
       },
     },
     "6": {
