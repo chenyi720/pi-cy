@@ -164,3 +164,33 @@ export function setModel(model: string, provider: string): void {
 export function clearMessages(): void {
   setState({ messages: [], error: null, tokenUsage: null });
 }
+
+export function loadSessionMessages(rawMessages: unknown[]): void {
+  const loaded: ChatMessage[] = [];
+  for (const raw of rawMessages) {
+    const msg = raw as Record<string, unknown>;
+    const role = (msg.role as string) || "assistant";
+    if (role !== "user" && role !== "assistant") continue;
+
+    const content = typeof msg.content === "string"
+      ? msg.content
+      : Array.isArray(msg.content)
+        ? (msg.content as Array<{ type?: string; text?: string }>)
+            .filter((b) => b.type === "text" && b.text)
+            .map((b) => b.text)
+            .join("")
+        : "";
+
+    if (!content) continue;
+
+    loaded.push({
+      id: nextId(),
+      role: role as "user" | "assistant",
+      content,
+      timestamp: Date.now(),
+    });
+  }
+  if (loaded.length > 0) {
+    setState({ messages: loaded, error: null, isAgentRunning: false });
+  }
+}

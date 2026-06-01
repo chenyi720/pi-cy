@@ -98,6 +98,36 @@ export function setupApi(server: http.Server): void {
       }
     }
 
+    // GET /api/models
+    if (method === "GET" && url.pathname === "/api/models") {
+      try {
+        const raw = execSync("pi --list-models", {
+          encoding: "utf-8",
+          timeout: 15000,
+          windowsHide: true,
+        });
+        const lines = raw.split("\n").filter((l) => l.trim());
+        const models: Array<Record<string, string>> = [];
+        for (const line of lines) {
+          const parts = line.trim().split(/\s{2,}/);
+          if (parts.length >= 4 && parts[0] !== "provider") {
+            models.push({
+              provider: parts[0],
+              id: parts[1],
+              name: parts[1],
+              context: parts[2] || "",
+              maxTokens: parts[3] || "",
+              reasoning: parts[4] || "no",
+              images: parts[5] || "no",
+            });
+          }
+        }
+        return sendJson(models);
+      } catch {
+        return sendJson([]);
+      }
+    }
+
     // GET /api/files
     if (method === "GET" && url.pathname === "/api/files") {
       const dir = safePath(url.searchParams.get("path") || undefined);
@@ -288,6 +318,35 @@ export function setupApi(server: http.Server): void {
         });
         const branches = raw.split("\n").filter((b) => b.trim());
         return sendJson(branches);
+      } catch {
+        return sendJson([]);
+      }
+    }
+
+    // GET /api/search
+    if (method === "GET" && url.pathname === "/api/search") {
+      const q = url.searchParams.get("q");
+      const searchPath = url.searchParams.get("path") || getProjectDir() || process.cwd();
+      if (!q) return sendJson([]);
+      const safeSearchPath = safePath(searchPath);
+      if (!safeSearchPath) return sendJson([]);
+      try {
+        const raw = execSync(
+          `rg --no-heading -n -i --max-count=5 "${q.replace(/"/g, '\\"')}" "${safeSearchPath}"`,
+          { encoding: "utf-8", timeout: 10000, windowsHide: true },
+        );
+        const results: Array<{ path: string; file: string; line: number; text: string }> = [];
+        for (const line of raw.split("\n")) {
+          const match = line.match(/^(.+?):(\d+):(.*)$/);
+          if (match) {
+            const filePath = match[1];
+            const lineNum = parseInt(match[2], 10);
+            const text = match[3].trim();
+            const fileName = filePath.split(/[/\\]/).pop() || filePath;
+            results.push({ path: filePath, file: fileName, line: lineNum, text });
+          }
+        }
+        return sendJson(results.slice(0, 50));
       } catch {
         return sendJson([]);
       }

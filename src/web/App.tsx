@@ -9,6 +9,7 @@ import {
   setTokenUsage,
   setError,
   clearMessages,
+  loadSessionMessages,
 } from "./stores/chat";
 import { ChatPanel } from "./components/ChatPanel";
 import { ChatInput } from "./components/ChatInput";
@@ -24,6 +25,7 @@ import { useKeyBindings, KEYBINDINGS_HELP } from "./components/KeyBindings";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { useErrorHandler, ErrorToast } from "./components/ErrorToast";
 import { ImageGenerator } from "./components/ImageGenerator";
+import { ModelSelector } from "./components/ModelSelector";
 import "./styles/themes.css";
 import "highlight.js/styles/github-dark.css";
 
@@ -49,8 +51,18 @@ export default function App() {
     { id: "default", name: "Session 1" },
   ]);
   const [activeTabId, setActiveTabId] = useState("default");
-  const workspacePath = "C:\\Users\\admin\\Desktop\\PI_agent-CY";
+  const [workspacePath, setWorkspacePath] = useState("");
   const { errors, addError, dismissError } = useErrorHandler();
+
+  useEffect(() => {
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((data) => {
+        const cwd = data.settings?.lastWorkspace || process.cwd?.() || "";
+        setWorkspacePath(cwd);
+      })
+      .catch(() => setWorkspacePath(""));
+  }, []);
 
   const handleFileClick = useCallback(async (path: string) => {
     setFileLoading(true);
@@ -90,6 +102,7 @@ export default function App() {
         const name = sessionPath.split(/[/\\]/).pop()?.replace(".jsonl", "") || "Session";
         setSessionTabs((prev) => [...prev, { id, name, sessionPath }]);
         setActiveTabId(id);
+        loadSessionMessages(data.messages);
       }
     } catch { /* ignore */ }
   }, []);
@@ -277,6 +290,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <span className="text-base font-bold text-gray-900 dark:text-white">PI-CY</span>
             <span className="text-[10px] text-gray-400">v0.1.0</span>
+            <ModelSelector />
 
             {/* Session tabs */}
             <div className="flex ml-3 border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
