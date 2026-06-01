@@ -306,7 +306,7 @@ export default function App() {
               <button
                 onClick={handleNewSession}
                 className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-400 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
-                title="\u65b0\u5efa\u4f1a\u8bdd (Ctrl+N)"
+                title="新建会话 (Ctrl+N)"
               >
                 +
               </button>
@@ -342,9 +342,9 @@ export default function App() {
             <button
               onClick={() => setShowHelp((v) => !v)}
               className="hover:text-gray-600"
-              title="\u5feb\u6377\u952e (Ctrl+/)"
+              title="快捷键 (Ctrl+/)"
             >
-              \u5feb\u6377\u952e
+              快捷键
             </button>
             <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
             {connected ? "已连接" : "未连接"}
@@ -418,7 +418,7 @@ export default function App() {
                 <div className="flex-1">
                   {fileLoading ? (
                     <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                      \u52a0\u8f7d\u4e2d...
+                      加载中...
                     </div>
                   ) : (
                     <CodeEditor filePath={openFile.path} content={openFile.content} readOnly={false} />

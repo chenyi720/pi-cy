@@ -37,7 +37,7 @@ export function SessionHistory({ onLoadSession, currentSessionPath }: Props) {
 
   const handleDelete = async (e: React.MouseEvent, sessionPath: string) => {
     e.stopPropagation();
-    if (!confirm("\u786e\u5b9a\u5220\u9664\u6b64\u4f1a\u8bdd\uff1f")) return;
+    if (!confirm("确定删除此会话？")) return;
     try {
       await fetch(`/api/session-detail?path=${encodeURIComponent(sessionPath)}`, {
         method: "DELETE",
@@ -58,8 +58,8 @@ export function SessionHistory({ onLoadSession, currentSessionPath }: Props) {
     const now = new Date();
     const diff = now.getTime() - d.getTime();
     if (diff < 60000) return "刚刚";
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}\u5206\u949f\u524d`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}\u5c0f\u65f6\u524d`;
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
     return d.toLocaleDateString();
   };
 
@@ -68,7 +68,7 @@ export function SessionHistory({ onLoadSession, currentSessionPath }: Props) {
       <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            \u5386\u53f2\u4f1a\u8bdd
+            历史会话
           </div>
           <button onClick={refresh} className="text-xs text-gray-400 hover:text-gray-600 px-1">
             {loading ? "..." : "?"}
@@ -78,13 +78,13 @@ export function SessionHistory({ onLoadSession, currentSessionPath }: Props) {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="\u641c\u7d22\u4f1a\u8bdd..."
+          placeholder="搜索会话..."
           className="w-full px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
       </div>
       <div className="flex-1 overflow-y-auto">
         {filtered.length === 0 && (
-          <div className="px-3 py-4 text-center text-sm text-gray-400">\u6682\u65e0\u4f1a\u8bdd</div>
+          <div className="px-3 py-4 text-center text-sm text-gray-400">暂无会话</div>
         )}
         {filtered.map((s) => {
           const isActive = s.path === currentSessionPath;
@@ -101,7 +101,7 @@ export function SessionHistory({ onLoadSession, currentSessionPath }: Props) {
                 <button
                   onClick={(e) => handleDelete(e, s.path)}
                   className="text-gray-400 hover:text-red-500 text-xs ml-1 shrink-0"
-                  title="\u5220\u9664"
+                  title="删除"
                 >
                   �?                </button>
               </div>
