@@ -61,13 +61,13 @@ function parseYamlFrontmatter(yaml: string): Record<string, unknown> {
     if (!match) { i++; continue; }
 
     const key = match[1];
-    let value = match[2].trim();
+    const value = match[2].trim();
 
     if (value === "|" || value === ">") {
       const multiline: string[] = [];
       i++;
       while (i < lines.length && (lines[i].startsWith("  ") || lines[i].startsWith("\t") || lines[i].trim() === "")) {
-        multiline.push(lines[i].replace(/^  /, ""));
+        multiline.push(lines[i].replace(/^\s{2}/, ""));
         i++;
       }
       result[key] = multiline.join("\n").trim();
