@@ -35,12 +35,8 @@ export async function executeHooks(
         cmd = cmd.replace(new RegExp(`\\$\\{${key}\\}`, "g"), value);
       }
 
-      const output = execSync(cmd, {
-        encoding: "utf-8",
-        timeout: 30000,
-        windowsHide: true,
-        shell: true,
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const output = execSync(cmd, { encoding: "utf-8", timeout: 30000, windowsHide: true, shell: true } as any) as string;
 
       if (output.trim()) {
         results.push(`[${hook.name}] ${output.trim()}`);

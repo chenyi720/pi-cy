@@ -11,6 +11,7 @@ export interface PlanStep {
   error?: string;
   startedAt?: number;
   completedAt?: number;
+  updatedAt?: number;
 }
 
 export interface Plan {
