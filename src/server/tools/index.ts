@@ -2,6 +2,7 @@ import "./bash.js";
 import "./file-tools.js";
 import "./search-tools.js";
 import "./web-tools.js";
+import "./git-tools.js";
 
 export { registerTool, getTool, getAllTools, getToolNames } from "./registry.js";
 export { executeTool, getToolSchemas } from "./executor.js";

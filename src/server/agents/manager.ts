@@ -66,6 +66,8 @@ async function runAgent(instance: AgentInstance, def: AgentDefinition): Promise<
 
     proc.stdout?.on("data", (chunk: Buffer) => {
       stdout += chunk.toString();
+      instance.output = stdout.trim();
+      instance.updatedAt = Date.now();
     });
 
     proc.stderr?.on("data", (chunk: Buffer) => {

@@ -36,7 +36,8 @@ export async function executeHooks(
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const output = execSync(cmd, { encoding: "utf-8", timeout: 30000, windowsHide: true, shell: true } as any) as string;
+      const rawOutput = execSync(cmd, { encoding: "utf-8", timeout: 30000, windowsHide: true, shell: true, maxBuffer: 1024 * 1024 } as any) as string;
+      const output = rawOutput.length > 2000 ? rawOutput.slice(0, 2000) + "\n... (truncated)" : rawOutput;
 
       if (output.trim()) {
         results.push(`[${hook.name}] ${output.trim()}`);
@@ -60,7 +61,7 @@ registerHook({
 registerHook({
   name: "typecheck-on-save",
   event: "on-save",
-  command: "npx tsc --noEmit 2>&1 | head -20",
+  command: "npx tsc --noEmit",
   description: "Run type checker when files are saved",
   enabled: false,
 });

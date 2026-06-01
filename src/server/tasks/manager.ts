@@ -1,8 +1,10 @@
 import { spawn } from "node:child_process";
+import cron from "node-cron";
 import type { Task, TaskStatus, TaskSchedule } from "./types.js";
 
 const tasks = new Map<string, Task>();
 const runningProcesses = new Map<string, ReturnType<typeof spawn>>();
+const cronJobs = new Map<string, cron.ScheduledTask>();
 
 function nextId(): string {
   return `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -27,6 +29,19 @@ export function createTask(
   };
 
   tasks.set(id, task);
+
+  if (schedule === "cron" && cronExpression && cron.validate(cronExpression)) {
+    const job = cron.schedule(cronExpression, () => {
+      task.status = "running";
+      task.lastRunAt = Date.now();
+      task.updatedAt = Date.now();
+      runTask(task);
+    });
+    cronJobs.set(id, job);
+    task.status = "running";
+    task.nextRunAt = Date.now();
+  }
+
   return task;
 }
 
@@ -74,12 +89,16 @@ async function runTask(task: Task): Promise<void> {
       runningProcesses.delete(task.id);
       task.updatedAt = Date.now();
 
-      if (code === 0) {
-        task.status = "completed";
-        task.result = stdout.trim();
+      if (task.schedule !== "cron") {
+        if (code === 0) {
+          task.status = "completed";
+          task.result = stdout.trim();
+        } else {
+          task.status = "failed";
+          task.error = stderr.trim() || `Exit code ${code}`;
+        }
       } else {
-        task.status = "failed";
-        task.error = stderr.trim() || `Exit code ${code}`;
+        task.result = stdout.trim();
       }
 
       resolve();
@@ -87,8 +106,10 @@ async function runTask(task: Task): Promise<void> {
 
     proc.on("error", (err) => {
       runningProcesses.delete(task.id);
-      task.status = "failed";
-      task.error = err.message;
+      if (task.schedule !== "cron") {
+        task.status = "failed";
+        task.error = err.message;
+      }
       task.updatedAt = Date.now();
       resolve();
     });
@@ -103,6 +124,12 @@ export function cancelTask(id: string): boolean {
   if (proc) {
     try { proc.kill(); } catch { /* ignore */ }
     runningProcesses.delete(id);
+  }
+
+  const job = cronJobs.get(id);
+  if (job) {
+    job.stop();
+    cronJobs.delete(id);
   }
 
   task.status = "cancelled";
@@ -121,4 +148,20 @@ export function updateTaskStatus(id: string, status: TaskStatus): void {
     task.status = status;
     task.updatedAt = Date.now();
   }
+}
+
+export function getCronJobs(): Array<{ id: string; name: string; expression: string; running: boolean }> {
+  const result: Array<{ id: string; name: string; expression: string; running: boolean }> = [];
+  for (const [id] of cronJobs) {
+    const task = tasks.get(id);
+    if (task) {
+      result.push({
+        id,
+        name: task.name,
+        expression: task.cronExpression || "",
+        running: true,
+      });
+    }
+  }
+  return result;
 }

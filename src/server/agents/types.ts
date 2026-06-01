@@ -12,6 +12,7 @@ export interface AgentInstance {
   definition: string;
   status: AgentStatus;
   task: string;
+  output?: string;
   result?: string;
   error?: string;
   createdAt: number;

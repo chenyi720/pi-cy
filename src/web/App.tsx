@@ -29,11 +29,13 @@ import { ModelSelector } from "./components/ModelSelector";
 import { TerminalPanel } from "./components/TerminalPanel";
 import { ChangePanel } from "./components/ChangePanel";
 import { SkillManager } from "./components/SkillManager";
+import { McpSettings } from "./components/McpSettings";
+import { GitWorktreePanel } from "./components/GitWorktreePanel";
 import { loadChanges } from "./stores/changes";
 import "./styles/themes.css";
 import "highlight.js/styles/github-dark.css";
 
-type SidebarTab = "files" | "search" | "git" | "sessions" | "image" | "terminal" | "skills";
+type SidebarTab = "files" | "search" | "git" | "sessions" | "image" | "terminal" | "skills" | "mcp" | "worktrees";
 
 interface SessionTab {
   id: string;
@@ -297,13 +299,15 @@ export default function App() {
     { id: "image", label: "\u751f\u56fe" },
     { id: "terminal", label: "\u7ec8\u7aef" },
     { id: "skills", label: "\u6280\u80fd" },
+    { id: "mcp", label: "MCP" },
+    { id: "worktrees", label: "\u5de5\u4f5c\u533a" },
   ];
 
   return (
     <PermissionProvider>
-      <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
+      <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-3 py-1.5 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-white/30 dark:border-gray-700/30 shadow-sm">
           <div className="flex items-center gap-2">
             <span className="text-base font-bold text-gray-900 dark:text-white">PI-CY</span>
             <span className="text-[10px] text-gray-400">v0.1.0</span>
@@ -431,6 +435,12 @@ export default function App() {
               )}
               {sidebarTab === "skills" && (
                 <SkillManager />
+              )}
+              {sidebarTab === "mcp" && (
+                <McpSettings />
+              )}
+              {sidebarTab === "worktrees" && (
+                <GitWorktreePanel />
               )}
             </Sidebar>
           )}

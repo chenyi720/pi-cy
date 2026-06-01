@@ -102,16 +102,40 @@ async function connectServer(name: string, config: McpServerConfig): Promise<voi
 
     proc.stdin?.write(JSON.stringify(initMsg) + "\n");
 
+    let initReceived = false;
+    const initHandler = (chunk: Buffer) => {
+      const lines = chunk.toString().split("\n");
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const msg = JSON.parse(trimmed);
+          if (msg.id === 1 && msg.result) {
+            initReceived = true;
+            proc.stdout?.off("data", initHandler);
+            console.log(`[MCP] ${name} initialize response received`);
+            const listMsg = {
+              jsonrpc: "2.0",
+              id: 2,
+              method: "tools/list",
+              params: {},
+            };
+            proc.stdin?.write(JSON.stringify(listMsg) + "\n");
+            resolve();
+          }
+        } catch { /* ignore */ }
+      }
+    };
+
+    proc.stdout?.on("data", initHandler);
+
     setTimeout(() => {
-      const listMsg = {
-        jsonrpc: "2.0",
-        id: 2,
-        method: "tools/list",
-        params: {},
-      };
-      proc.stdin?.write(JSON.stringify(listMsg) + "\n");
-      resolve();
-    }, 1000);
+      if (!initReceived) {
+        proc.stdout?.off("data", initHandler);
+        console.error(`[MCP] ${name} initialize timeout (5s)`);
+        resolve();
+      }
+    }, 5000);
   });
 }
 
