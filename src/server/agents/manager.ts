@@ -1,11 +1,13 @@
 import { spawn } from "node:child_process";
-import type { AgentDefinition, AgentInstance } from "./types.js";
+import { getBroadcast } from "../ws.js";
+import type { AgentDefinition, AgentInstance, SwarmInstance, SwarmAgentStep } from "./types.js";
 
 const definitions = new Map<string, AgentDefinition>();
 const instances = new Map<string, AgentInstance>();
+const swarms = new Map<string, SwarmInstance>();
 
-function nextId(): string {
-  return `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+function nextId(prefix = "agent"): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export function registerAgent(def: AgentDefinition): void {
@@ -106,6 +108,140 @@ export function getAllAgentInstances(): AgentInstance[] {
 export function deleteAgentInstance(id: string): boolean {
   return instances.delete(id);
 }
+
+// --- Swarm Orchestration Engine ---
+
+export function getAllSwarmInstances(): SwarmInstance[] {
+  return Array.from(swarms.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export function spawnSwarm(template: string, task: string): SwarmInstance | null {
+  const id = nextId("swarm");
+  let steps: SwarmAgentStep[] = [];
+
+  if (template === "coder-reviewer") {
+    steps = [
+      { agentName: "general", status: "pending" },
+      { agentName: "reviewer", status: "pending" },
+    ];
+  } else if (template === "research-analyst") {
+    steps = [
+      { agentName: "researcher", status: "pending" },
+      { agentName: "general", status: "pending" },
+    ];
+  } else {
+    // Fallback simple sequential swarm
+    steps = [
+      { agentName: "general", status: "pending" },
+    ];
+  }
+
+  const swarm: SwarmInstance = {
+    id,
+    template,
+    task,
+    status: "idle",
+    steps,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+
+  swarms.set(id, swarm);
+  getBroadcast()({ type: "swarm_update", swarmId: id, swarm });
+  
+  // Kickstart execution
+  runSwarmStep(id, 0).catch(console.error);
+
+  return swarm;
+}
+
+async function runSwarmStep(swarmId: string, stepIndex: number): Promise<void> {
+  const swarm = swarms.get(swarmId);
+  if (!swarm) return;
+
+  const step = swarm.steps[stepIndex];
+  if (!step) {
+    swarm.status = "completed";
+    swarm.updatedAt = Date.now();
+    getBroadcast()({ type: "swarm_update", swarmId, swarm });
+    return;
+  }
+
+  step.status = "running";
+  swarm.status = "running";
+  swarm.updatedAt = Date.now();
+  getBroadcast()({ type: "swarm_update", swarmId, swarm });
+
+  let stepTask = swarm.task;
+  if (stepIndex > 0) {
+    const prevStep = swarm.steps[stepIndex - 1];
+    stepTask = `Based on the original task requirements: "${swarm.task}" and the work done by the previous agent:\n\n[Previous Agent's Output]\n${prevStep.result || ""}\n\nPlease perform your task (e.g. review, analyze, or refine).`;
+  }
+
+  const def = definitions.get(step.agentName);
+  if (!def) {
+    step.status = "failed";
+    step.error = `Agent definition for ${step.agentName} not found`;
+    swarm.status = "failed";
+    swarm.updatedAt = Date.now();
+    getBroadcast()({ type: "swarm_update", swarmId, swarm });
+    return;
+  }
+
+  const args = [
+    "--print",
+    "--model", "mimo-v2.5-pro",
+    "--provider", "xiaomi-token-plan-cn",
+  ];
+  if (def.systemPrompt) {
+    args.push("--append-system-prompt", def.systemPrompt);
+  }
+  args.push(stepTask);
+
+  const proc = spawn("pi", args, {
+    shell: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  let stdout = "";
+  let stderr = "";
+
+  proc.stdout?.on("data", (chunk: Buffer) => {
+    stdout += chunk.toString();
+    step.output = stdout.trim();
+    swarm.updatedAt = Date.now();
+    getBroadcast()({ type: "swarm_update", swarmId, swarm });
+  });
+
+  proc.stderr?.on("data", (chunk: Buffer) => {
+    stderr += chunk.toString();
+  });
+
+  proc.on("close", (code) => {
+    swarm.updatedAt = Date.now();
+    if (code === 0) {
+      step.status = "completed";
+      step.result = stdout.trim();
+      getBroadcast()({ type: "swarm_update", swarmId, swarm });
+      runSwarmStep(swarmId, stepIndex + 1).catch(console.error);
+    } else {
+      step.status = "failed";
+      step.error = stderr.trim() || `Exit code ${code}`;
+      swarm.status = "failed";
+      getBroadcast()({ type: "swarm_update", swarmId, swarm });
+    }
+  });
+
+  proc.on("error", (err) => {
+    step.status = "failed";
+    step.error = err.message;
+    swarm.status = "failed";
+    swarm.updatedAt = Date.now();
+    getBroadcast()({ type: "swarm_update", swarmId, swarm });
+  });
+}
+
+// --- Default agent registers ---
 
 registerAgent({
   name: "general",

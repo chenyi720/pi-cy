@@ -7,6 +7,7 @@ export interface PlanStep {
   description: string;
   status: PlanStepStatus;
   dependencies?: string[];
+  command?: string;
   result?: string;
   error?: string;
   startedAt?: number;

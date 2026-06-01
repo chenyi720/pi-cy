@@ -5,13 +5,13 @@ import os from "node:os";
 import { execSync } from "node:child_process";
 import { safePath, getProjectDir } from "../security.js";
 import { isAlive } from "../rpc.js";
-import { generateImage, isComfyUIAvailable } from "./comfyui.js";
+import { generateImage, isComfyUIAvailable, getPresets, savePresets, type ImagePreset } from "./comfyui.js";
 import { getToolSchemas, executeTool } from "../tools/index.js";
 import { isMcpInitialized, getDiscoveredMcpTools } from "../mcp/index.js";
-import { getLoadedSkills, invokeSkill } from "../skills/index.js";
+import { getLoadedSkills, invokeSkill, reloadSkills } from "../skills/index.js";
 import { getAllHooks, executeHooks } from "../hooks/index.js";
-import { createPlan, getAllPlans, updateStepStatus } from "../plan/index.js";
-import { spawnAgent, getAllAgentInstances, getAllAgentDefinitions } from "../agents/index.js";
+import { createPlan, getAllPlans, updateStepStatus, runStep } from "../plan/index.js";
+import { spawnAgent, getAllAgentInstances, getAllAgentDefinitions, getAllSwarmInstances, spawnSwarm } from "../agents/index.js";
 import { createTask, getAllTasks, startTask, cancelTask } from "../tasks/index.js";
 
 function readJson(filePath: string): unknown {
@@ -165,11 +165,52 @@ export function setupApi(server: http.Server): void {
 
     // GET /api/skills
     if (method === "GET" && url.pathname === "/api/skills") {
-      return sendJson(getLoadedSkills().map((s) => ({
-        name: s.name,
-        description: s.description,
-        path: s.path,
-      })));
+      return sendJson(getLoadedSkills());
+    }
+
+    // POST /api/skills
+    if (method === "POST" && url.pathname === "/api/skills") {
+      const body = await readBody(req);
+      const name = body.name as string;
+      const description = body.description as string;
+      const triggers = body.triggers as string[];
+      const content = body.content as string;
+      if (!name || !content) return sendJson({ error: "name and content required" }, 400);
+
+      const skillsDir = path.join(process.cwd(), "skills");
+      if (!fs.existsSync(skillsDir)) {
+        fs.mkdirSync(skillsDir, { recursive: true });
+      }
+
+      const yamlMeta = [
+        "---",
+        `name: "${name}"`,
+        `description: "${description || name}"`,
+        ...(triggers && triggers.length > 0
+          ? ["triggers:", ...triggers.map(t => `  - "${t}"`)]
+          : []),
+        "---",
+        content
+      ].join("\n");
+
+      const filePath = path.join(skillsDir, `${name}.md`);
+      fs.writeFileSync(filePath, yamlMeta, "utf-8");
+      reloadSkills();
+      return sendJson({ ok: true });
+    }
+
+    // DELETE /api/skills/:name
+    if (method === "DELETE" && url.pathname?.startsWith("/api/skills/")) {
+      const parts = url.pathname.split("/");
+      const name = parts[3];
+      if (!name) return sendJson({ error: "name required" }, 400);
+
+      const filePath = path.join(process.cwd(), "skills", `${name}.md`);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      reloadSkills();
+      return sendJson({ ok: true });
     }
 
     // POST /api/skills/invoke
@@ -208,10 +249,20 @@ export function setupApi(server: http.Server): void {
     if (method === "POST" && url.pathname === "/api/plans") {
       const body = await readBody(req);
       const title = body.title as string;
-      const steps = body.steps as string[];
+      const steps = body.steps as any[];
       if (!title || !steps) return sendJson({ error: "title and steps required" }, 400);
       const plan = createPlan(title, body.description as string || "", steps);
       return sendJson(plan);
+    }
+
+    // POST /api/plans/:id/steps/:stepId/run
+    if (method === "POST" && url.pathname?.startsWith("/api/plans/") && url.pathname.includes("/steps/") && url.pathname.endsWith("/run")) {
+      const parts = url.pathname.split("/");
+      const planId = parts[3];
+      const stepId = parts[5];
+      if (!planId || !stepId) return sendJson({ error: "planId and stepId required" }, 400);
+      runStep(planId, stepId).catch(console.error);
+      return sendJson({ ok: true });
     }
 
     // POST /api/plans/:id/step
@@ -230,6 +281,7 @@ export function setupApi(server: http.Server): void {
       return sendJson({
         definitions: getAllAgentDefinitions(),
         instances: getAllAgentInstances(),
+        swarms: getAllSwarmInstances(),
       });
     }
 
@@ -242,6 +294,16 @@ export function setupApi(server: http.Server): void {
       const instance = spawnAgent(defName, task);
       if (!instance) return sendJson({ error: "agent definition not found" }, 404);
       return sendJson(instance);
+    }
+
+    // POST /api/agents/swarm
+    if (method === "POST" && url.pathname === "/api/agents/swarm") {
+      const body = await readBody(req);
+      const template = body.template as string;
+      const task = body.task as string;
+      if (!template || !task) return sendJson({ error: "template and task required" }, 400);
+      const swarm = spawnSwarm(template, task);
+      return sendJson(swarm);
     }
 
     // GET /api/tasks
@@ -544,6 +606,43 @@ export function setupApi(server: http.Server): void {
       } catch (e) {
         return sendJson({ error: (e as Error).message }, 500);
       }
+    }
+
+    // GET /api/comfyui/presets
+    if (method === "GET" && url.pathname === "/api/comfyui/presets") {
+      return sendJson(getPresets());
+    }
+
+    // POST /api/comfyui/presets
+    if (method === "POST" && url.pathname === "/api/comfyui/presets") {
+      const body = await readBody(req);
+      const name = body.name as string;
+      const promptSuffix = body.promptSuffix as string;
+      if (!name || !promptSuffix) return sendJson({ error: "name and promptSuffix required" }, 400);
+
+      const presets = getPresets();
+      const newPreset: ImagePreset = {
+        id: `preset-${Date.now()}`,
+        name,
+        promptSuffix,
+        negativePrompt: body.negativePrompt as string,
+        width: body.width as number,
+        height: body.height as number,
+        steps: body.steps as number
+      };
+      presets.push(newPreset);
+      savePresets(presets);
+      return sendJson(newPreset);
+    }
+
+    // DELETE /api/comfyui/presets/:id
+    if (method === "DELETE" && url.pathname?.startsWith("/api/comfyui/presets/")) {
+      const parts = url.pathname.split("/");
+      const id = parts[4];
+      if (!id) return sendJson({ error: "id required" }, 400);
+      const presets = getPresets().filter(p => p.id !== id);
+      savePresets(presets);
+      return sendJson({ ok: true });
     }
 
     // GET /api/comfyui/image

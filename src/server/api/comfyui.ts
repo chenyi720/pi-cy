@@ -207,3 +207,77 @@ export async function isComfyUIAvailable(): Promise<boolean> {
       .on("error", () => resolve(false));
   });
 }
+
+export interface ImagePreset {
+  id: string;
+  name: string;
+  promptSuffix: string;
+  negativePrompt?: string;
+  width?: number;
+  height?: number;
+  steps?: number;
+}
+
+const presetsFilePath = path.join(process.cwd(), "media", "generated", "presets.json");
+
+const DEFAULT_PRESETS: ImagePreset[] = [
+  {
+    id: "preset-3d-anime",
+    name: "3D 动漫卡通",
+    promptSuffix: ", cute 3D anime cartoon character, chibi, vibrant colors, detailed, octane render, 4k",
+    negativePrompt: "realistic, photograph, low quality, bad anatomy",
+    width: 1024,
+    height: 1024,
+    steps: 25,
+  },
+  {
+    id: "preset-photo",
+    name: "超写实产品图",
+    promptSuffix: ", photorealistic, highly detailed, professional lighting, cinematic composition, 8k",
+    negativePrompt: "drawing, painting, illustration, cartoon, render",
+    width: 1024,
+    height: 1024,
+    steps: 30,
+  },
+  {
+    id: "preset-flat",
+    name: "扁平风格插画",
+    promptSuffix: ", flat vector illustration, minimalist, corporate design, clean lines, modern aesthetic",
+    negativePrompt: "realistic, photo, 3d, gradient, shadows",
+    width: 1024,
+    height: 1024,
+    steps: 20,
+  },
+  {
+    id: "preset-blueprint",
+    name: "线稿设计蓝图",
+    promptSuffix: ", blueprint line art, technical diagram, schematic, drafting grid, blueprint blue style",
+    negativePrompt: "realistic, photo, color, shading, texture",
+    width: 1024,
+    height: 1024,
+    steps: 20,
+  }
+];
+
+export function getPresets(): ImagePreset[] {
+  try {
+    if (fs.existsSync(presetsFilePath)) {
+      return JSON.parse(fs.readFileSync(presetsFilePath, "utf-8"));
+    }
+  } catch (e) {
+    console.error("Failed to read presets:", e);
+  }
+  return DEFAULT_PRESETS;
+}
+
+export function savePresets(presets: ImagePreset[]): void {
+  try {
+    const dir = path.dirname(presetsFilePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(presetsFilePath, JSON.stringify(presets, null, 2), "utf-8");
+  } catch (e) {
+    console.error("Failed to save presets:", e);
+  }
+}

@@ -1,3 +1,5 @@
+import { spawn } from "node:child_process";
+import { getBroadcast } from "../ws.js";
 import type { Plan, PlanStep, PlanStepStatus, PlanStatus } from "./types.js";
 
 const plans = new Map<string, Plan>();
@@ -6,14 +8,38 @@ function nextId(): string {
   return `plan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function createPlan(title: string, description: string, stepTitles: string[]): Plan {
+export function createPlan(
+  title: string,
+  description: string,
+  inputSteps: Array<string | { title: string; description?: string; command?: string; dependencies?: Array<string | number> }>
+): Plan {
   const id = nextId();
-  const steps: PlanStep[] = stepTitles.map((title, i) => ({
-    id: `${id}-step-${i}`,
-    title,
-    description: "",
-    status: "pending" as PlanStepStatus,
-  }));
+  const steps: PlanStep[] = inputSteps.map((step, i) => {
+    if (typeof step === "string") {
+      return {
+        id: `${id}-step-${i}`,
+        title: step,
+        description: "",
+        status: "pending" as PlanStepStatus,
+      };
+    } else {
+      const deps = step.dependencies?.map((dep) => {
+        if (typeof dep === "number" || /^\d+$/.test(String(dep))) {
+          return `${id}-step-${dep}`;
+        }
+        return String(dep);
+      }) || [];
+
+      return {
+        id: `${id}-step-${i}`,
+        title: step.title,
+        description: step.description || "",
+        status: "pending" as PlanStepStatus,
+        dependencies: deps,
+        command: step.command,
+      };
+    }
+  });
 
   const plan: Plan = {
     id,
@@ -28,6 +54,7 @@ export function createPlan(title: string, description: string, stepTitles: strin
   };
 
   plans.set(id, plan);
+  getBroadcast()({ type: "plan_update", planId: id, plan });
   return plan;
 }
 
@@ -44,6 +71,7 @@ export function updatePlanStatus(id: string, status: PlanStatus): void {
   if (plan) {
     plan.status = status;
     plan.updatedAt = Date.now();
+    getBroadcast()({ type: "plan_update", planId: id, plan });
   }
 }
 
@@ -87,6 +115,56 @@ export function updateStepStatus(
   if (status === "failed") {
     plan.status = "failed";
   }
+
+  getBroadcast()({ type: "plan_update", planId, plan });
+}
+
+export async function runStep(planId: string, stepId: string): Promise<void> {
+  const plan = plans.get(planId);
+  if (!plan) return;
+  const step = plan.steps.find((s) => s.id === stepId);
+  if (!step) return;
+
+  if (!step.command) {
+    updateStepStatus(planId, stepId, "completed", "执行成功 (无命令)");
+    return;
+  }
+
+  updateStepStatus(planId, stepId, "in_progress");
+
+  const cmd = step.command;
+  const proc = spawn(cmd, { shell: true, cwd: process.cwd() });
+
+  let stdout = "";
+  let stderr = "";
+
+  proc.stdout?.on("data", (chunk: Buffer) => {
+    stdout += chunk.toString();
+  });
+  proc.stderr?.on("data", (chunk: Buffer) => {
+    stderr += chunk.toString();
+  });
+
+  return new Promise<void>((resolve) => {
+    proc.on("close", (code) => {
+      if (code === 0) {
+        updateStepStatus(planId, stepId, "completed", stdout.trim() || "执行成功");
+      } else {
+        updateStepStatus(
+          planId,
+          stepId,
+          "failed",
+          undefined,
+          stderr.trim() || stdout.trim() || `退出的状态码: ${code}`
+        );
+      }
+      resolve();
+    });
+    proc.on("error", (err) => {
+      updateStepStatus(planId, stepId, "failed", undefined, err.message);
+      resolve();
+    });
+  });
 }
 
 export function getNextPendingStep(planId: string): PlanStep | undefined {
@@ -104,5 +182,9 @@ export function getNextPendingStep(planId: string): PlanStep | undefined {
 }
 
 export function deletePlan(id: string): boolean {
-  return plans.delete(id);
+  const ok = plans.delete(id);
+  if (ok) {
+    getBroadcast()({ type: "plan_deleted", planId: id });
+  }
+  return ok;
 }
