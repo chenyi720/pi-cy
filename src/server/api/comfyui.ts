@@ -22,47 +22,55 @@ interface ComfyHistoryResponse {
   };
 }
 
-function buildWorkflow(prompt: string, negativePrompt = "", width = 512, height = 512, steps = 20, seed?: number): Record<string, unknown> {
+function buildWorkflow(prompt: string, negativePrompt = "", width = 1024, height = 1024, steps = 0, seed?: number): Record<string, unknown> {
   const actualSeed = seed ?? Math.floor(Math.random() * 2 ** 32);
   return {
-    "3": {
-      class_type: "KSampler",
+    "4": {
+      class_type: "HiDreamO1ModelLoader",
       inputs: {
-        seed: actualSeed,
-        steps,
-        cfg: 7,
-        sampler_name: "euler",
-        scheduler: "normal",
-        denoise: 1,
-        model: ["4", 0],
-        positive: ["6", 0],
-        negative: ["7", 0],
-        latent_image: ["5", 0],
+        model_name: "HiDream-O1-Image-Dev-2604-FP8",
+        precision: "auto",
+        attention: "auto",
+        download_if_missing: false,
       },
     },
-    "4": {
-      class_type: "CheckpointLoaderSimple",
-      inputs: { ckpt_name: "v1-5-pruned-emaonly.sdxl" },
-    },
     "5": {
-      class_type: "EmptyLatentImage",
-      inputs: { width, height, batch_size: 1 },
+      class_type: "HiDreamO1Conditioning",
+      inputs: {
+        prompt,
+        enhanced_prompt: "",
+        negative_prompt: negativePrompt || "",
+      },
+    },
+    "3": {
+      class_type: "HiDreamO1Sampler",
+      inputs: {
+        model: ["4", 0],
+        conditioning: ["5", 0],
+        model_type: "auto",
+        width,
+        height,
+        steps,
+        seed: actualSeed,
+        guidance_scale: 5.0,
+        shift: -1.0,
+        noise_scale_start: 7.5,
+        noise_scale_end: 7.5,
+        noise_clip_std: 2.5,
+        dev_editing_scheduler: "flow_match",
+        layout_bboxes: "",
+        preview_every: 4,
+        keep_image1_aspect: false,
+        force_offload: false,
+        image: "0",
+      },
     },
     "6": {
-      class_type: "CLIPTextEncode",
-      inputs: { text: prompt, clip: ["4", 1] },
-    },
-    "7": {
-      class_type: "CLIPTextEncode",
-      inputs: { text: negativePrompt || "blurry, low quality, distorted", clip: ["4", 1] },
-    },
-    "8": {
-      class_type: "VAEDecode",
-      inputs: { samples: ["3", 0], vae: ["4", 2] },
-    },
-    "9": {
       class_type: "SaveImage",
-      inputs: { filename_prefix: "pi-cy", images: ["8", 0] },
+      inputs: {
+        images: ["3", 0],
+        filename_prefix: "pi-cy",
+      },
     },
   };
 }
@@ -123,7 +131,7 @@ function getImage(filename: string, subfolder: string): Promise<Buffer> {
   });
 }
 
-async function waitForCompletion(promptId: string, timeoutMs = 120000): Promise<ComfyHistoryResponse[string]> {
+async function waitForCompletion(promptId: string, timeoutMs = 180000): Promise<ComfyHistoryResponse[string]> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const history = await getHistory(promptId);
@@ -148,9 +156,9 @@ export async function generateImage(
   const workflow = buildWorkflow(
     prompt,
     options.negativePrompt,
-    options.width || 512,
-    options.height || 512,
-    options.steps || 20,
+    options.width || 1024,
+    options.height || 1024,
+    options.steps || 0,
     options.seed,
   );
 

@@ -7,9 +7,9 @@ interface Props {
 export function ImageGenerator({ onImageGenerated }: Props) {
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("blurry, low quality, distorted");
-  const [width, setWidth] = useState(512);
-  const [height, setHeight] = useState(512);
-  const [steps, setSteps] = useState(20);
+  const [width, setWidth] = useState(1024);
+  const [height, setHeight] = useState(1024);
+  const [steps, setSteps] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<{ imagePath: string; seed: number } | null>(null);
   const [error, setError] = useState("");
@@ -43,7 +43,7 @@ export function ImageGenerator({ onImageGenerated }: Props) {
   return (
     <div className="flex flex-col gap-3 p-3">
       <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-        Image Generation (ComfyUI)
+        Image Generation (HiDream O1)
       </div>
 
       <div>
@@ -75,7 +75,7 @@ export function ImageGenerator({ onImageGenerated }: Props) {
             onChange={(e) => setWidth(Number(e.target.value))}
             className="w-full px-2 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
           >
-            {[256, 384, 512, 640, 768, 1024].map((v) => (
+            {[512, 768, 1024, 1536, 2048].map((v) => (
               <option key={v} value={v}>{v}</option>
             ))}
           </select>
@@ -87,7 +87,7 @@ export function ImageGenerator({ onImageGenerated }: Props) {
             onChange={(e) => setHeight(Number(e.target.value))}
             className="w-full px-2 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
           >
-            {[256, 384, 512, 640, 768, 1024].map((v) => (
+            {[512, 768, 1024, 1536, 2048].map((v) => (
               <option key={v} value={v}>{v}</option>
             ))}
           </select>
@@ -99,7 +99,7 @@ export function ImageGenerator({ onImageGenerated }: Props) {
             onChange={(e) => setSteps(Number(e.target.value))}
             className="w-full px-2 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
           >
-            {[10, 15, 20, 25, 30, 40, 50].map((v) => (
+            {[0, 20, 28, 35, 50].map((v) => (
               <option key={v} value={v}>{v}</option>
             ))}
           </select>
