@@ -89,6 +89,7 @@ async function handleChatMessage(
     return;
   }
 
+  broadcast({ type: "message_start" });
   piSend({ type: "user_input", text });
 }
 
