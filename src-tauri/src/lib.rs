@@ -73,7 +73,7 @@ pub fn run() {
             use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState, GlobalShortcutExt};
             let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyP);
             let shortcut_clone = shortcut.clone();
-            app.global_shortcut().on_shortcut(shortcut_clone, move |app_handle, _sc, ev| {
+            let _ = app.global_shortcut().on_shortcut(shortcut_clone, move |app_handle, _sc, ev| {
                 if ev.state() == ShortcutState::Pressed {
                     if let Some(window) = app_handle.get_webview_window("main") {
                         if window.is_visible().unwrap_or(false) {
@@ -84,8 +84,10 @@ pub fn run() {
                         }
                     }
                 }
-            })?;
-            app.global_shortcut().register(shortcut)?;
+            });
+            if let Err(err) = app.global_shortcut().register(shortcut) {
+                eprintln!("Failed to register Ctrl+Shift+P global hotkey: {}", err);
+            }
 
             Ok(())
         })
