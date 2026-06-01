@@ -6,6 +6,7 @@ import { execSync } from "node:child_process";
 import { safePath, getProjectDir } from "../security.js";
 import { isAlive } from "../rpc.js";
 import { generateImage, isComfyUIAvailable } from "./comfyui.js";
+import { getToolSchemas, executeTool } from "../tools/index.js";
 
 function readJson(filePath: string): unknown {
   try {
@@ -126,6 +127,22 @@ export function setupApi(server: http.Server): void {
       } catch {
         return sendJson([]);
       }
+    }
+
+    // GET /api/tools
+    if (method === "GET" && url.pathname === "/api/tools") {
+      return sendJson(getToolSchemas());
+    }
+
+    // POST /api/tools/execute
+    if (method === "POST" && url.pathname === "/api/tools/execute") {
+      const body = await readBody(req);
+      const toolName = body.tool as string;
+      const params = (body.params || {}) as Record<string, unknown>;
+      const cwd = (body.cwd as string) || getProjectDir() || process.cwd();
+      if (!toolName) return sendJson({ error: "tool required" }, 400);
+      const result = await executeTool(toolName, params, cwd);
+      return sendJson(result);
     }
 
     // GET /api/files

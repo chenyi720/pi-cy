@@ -4,6 +4,7 @@ import path from "node:path";
 import { setupWebSocket, getBroadcast } from "./ws.js";
 import { setBroadcast, startPi, killPi } from "./rpc.js";
 import { setupApi } from "./api/index.js";
+import { addAllowedRoot, getToolSchemas } from "./tools/index.js";
 
 const PORT = Number(process.env.PORT) || 3456;
 
@@ -68,9 +69,14 @@ const shutdown = () => {
 process.on("SIGINT", shutdown);
 process.on("exit", () => killPi());
 
+// Initialize tools sandbox with project directory
+addAllowedRoot(process.cwd());
+addAllowedRoot(path.join(process.env.USERPROFILE || process.env.HOME || "", ".pi"));
+
 // Start
 server.listen(PORT, () => {
   console.log(`PI-CY running at http://localhost:${PORT}`);
+  console.log(`Tools available: ${getToolSchemas().map((t) => t.name).join(", ")}`);
   startPi({
     provider: "xiaomi-token-plan-cn",
     model: "mimo-v2.5-pro",
