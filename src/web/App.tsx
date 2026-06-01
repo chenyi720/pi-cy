@@ -262,11 +262,11 @@ export default function App() {
   const fileName = openFile?.path.split(/[/\\]/).pop() || "";
 
   const sidebarTabs: Array<{ id: SidebarTab; label: string }> = [
-    { id: "files", label: "??" },
-    { id: "search", label: "??" },
+    { id: "files", label: "文件" },
+    { id: "search", label: "搜索" },
     { id: "git", label: "Git" },
-    { id: "sessions", label: "??" },
-    { id: "image", label: "??" },
+    { id: "sessions", label: "历史" },
+    { id: "image", label: "生图" },
   ];
 
   return (
@@ -299,14 +299,14 @@ export default function App() {
                       }}
                       className="ml-1 text-[10px] opacity-60 hover:opacity-100"
                     >
-                      �?                    </button>
+                      �?                    </button>
                   )}
                 </div>
               ))}
               <button
                 onClick={handleNewSession}
                 className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-400 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
-                title="???? (Ctrl+N)"
+                title="\u65b0\u5efa\u4f1a\u8bdd (Ctrl+N)"
               >
                 +
               </button>
@@ -342,12 +342,12 @@ export default function App() {
             <button
               onClick={() => setShowHelp((v) => !v)}
               className="hover:text-gray-600"
-              title="??? (Ctrl+/)"
+              title="\u5feb\u6377\u952e (Ctrl+/)"
             >
               ?
             </button>
             <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
-            {connected ? "???" : "???"}
+            {connected ? "已连接" : "未连接"}
           </div>
         </div>
 
@@ -357,7 +357,7 @@ export default function App() {
             className="absolute top-10 right-4 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-3 w-64"
             onClick={() => setShowHelp(false)}
           >
-            <div className="text-xs font-semibold text-gray-500 mb-2">???</div>
+            <div className="text-xs font-semibold text-gray-500 mb-2">快捷键</div>
             {KEYBINDINGS_HELP.map((h) => (
               <div key={h.key} className="flex justify-between py-0.5 text-xs">
                 <span className="font-mono text-gray-600 dark:text-gray-300">{h.key}</span>
@@ -413,12 +413,12 @@ export default function App() {
                     onClick={() => setOpenFile(null)}
                     className="text-gray-400 hover:text-gray-600 text-xs ml-2"
                   >
-                    �?                  </button>
+                    �?                  </button>
                 </div>
                 <div className="flex-1">
                   {fileLoading ? (
                     <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                      ???...
+                      \u52a0\u8f7d\u4e2d...
                     </div>
                   ) : (
                     <CodeEditor filePath={openFile.path} content={openFile.content} readOnly={false} />
