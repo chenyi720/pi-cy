@@ -334,7 +334,8 @@ export default function App() {
                       }}
                       className="ml-1 text-[10px] opacity-60 hover:opacity-100"
                     >
-                      �?                    </button>
+                      ✕
+                    </button>
                   )}
                 </div>
               ))}
@@ -463,7 +464,8 @@ export default function App() {
                     onClick={() => setOpenFile(null)}
                     className="text-gray-400 hover:text-gray-600 text-xs ml-2"
                   >
-                    �?                  </button>
+                    ✕
+                  </button>
                 </div>
                 <div className="flex-1">
                   {fileLoading ? (

@@ -4,7 +4,7 @@ import type { Task, TaskStatus, TaskSchedule } from "./types.js";
 
 const tasks = new Map<string, Task>();
 const runningProcesses = new Map<string, ReturnType<typeof spawn>>();
-const cronJobs = new Map<string, cron.ScheduledTask>();
+const cronJobs = new Map<string, ReturnType<typeof cron.schedule>>();
 
 function nextId(): string {
   return `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

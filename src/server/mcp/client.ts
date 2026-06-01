@@ -1,4 +1,5 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { registerTool } from "../tools/registry.js";
 import type { ToolResult } from "../tools/types.js";
 import { loadMcpConfig, type McpServerConfig } from "./config.js";
@@ -10,7 +11,7 @@ interface McpTool {
   serverName: string;
 }
 
-const connectedServers = new Map<string, ChildProcess>();
+const connectedClients = new Map<string, Client>();
 const discoveredTools = new Map<string, McpTool>();
 let mcpInitialized = false;
 
@@ -43,134 +44,56 @@ export async function initMcp(): Promise<void> {
   }
 
   mcpInitialized = true;
-  console.log(`[MCP] Discovered ${discoveredTools.size} tool(s) from ${connectedServers.size} server(s)`);
+  console.log(`[MCP] Discovered ${discoveredTools.size} tool(s) from ${connectedClients.size} server(s)`);
 }
 
 async function connectServer(name: string, config: McpServerConfig): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const args = config.args || [];
-    const proc = spawn(config.command, args, {
-      stdio: ["pipe", "pipe", "pipe"],
-      shell: true,
-      env: { ...process.env, ...config.env },
-    });
-
-    connectedServers.set(name, proc);
-
-    let stdout = "";
-
-    proc.stdout?.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString();
-      const lines = stdout.split("\n");
-      stdout = lines.pop() || "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        try {
-          const msg = JSON.parse(trimmed);
-          handleMcpMessage(name, msg);
-        } catch { /* ignore non-JSON */ }
-      }
-    });
-
-    proc.stderr?.on("data", () => {
-      // stderr output from MCP server (ignored)
-    });
-
-    proc.on("error", (err) => {
-      console.error(`[MCP] ${name} error: ${err.message}`);
-      connectedServers.delete(name);
-      reject(err);
-    });
-
-    proc.on("exit", (code) => {
-      console.log(`[MCP] ${name} exited with code ${code}`);
-      connectedServers.delete(name);
-    });
-
-    const initMsg = {
-      jsonrpc: "2.0",
-      id: 1,
-      method: "initialize",
-      params: {
-        protocolVersion: "2024-11-05",
-        capabilities: { tools: {} },
-        clientInfo: { name: "pi-cy", version: "0.1.0" },
-      },
-    };
-
-    proc.stdin?.write(JSON.stringify(initMsg) + "\n");
-
-    let initReceived = false;
-    const initHandler = (chunk: Buffer) => {
-      const lines = chunk.toString().split("\n");
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        try {
-          const msg = JSON.parse(trimmed);
-          if (msg.id === 1 && msg.result) {
-            initReceived = true;
-            proc.stdout?.off("data", initHandler);
-            console.log(`[MCP] ${name} initialize response received`);
-            const listMsg = {
-              jsonrpc: "2.0",
-              id: 2,
-              method: "tools/list",
-              params: {},
-            };
-            proc.stdin?.write(JSON.stringify(listMsg) + "\n");
-            resolve();
-          }
-        } catch { /* ignore */ }
-      }
-    };
-
-    proc.stdout?.on("data", initHandler);
-
-    setTimeout(() => {
-      if (!initReceived) {
-        proc.stdout?.off("data", initHandler);
-        console.error(`[MCP] ${name} initialize timeout (5s)`);
-        resolve();
-      }
-    }, 5000);
-  });
-}
-
-function handleMcpMessage(serverName: string, msg: Record<string, unknown>): void {
-  if (msg.method === "tools/list" || (msg.result && (msg.result as Record<string, unknown>).tools)) {
-    const tools = ((msg.result as Record<string, unknown>)?.tools || []) as Array<{
-      name: string;
-      description?: string;
-      inputSchema?: Record<string, unknown>;
-    }>;
-
-    for (const tool of tools) {
-      const fullName = `mcp_${serverName}_${tool.name}`;
-      discoveredTools.set(fullName, {
-        name: tool.name,
-        description: tool.description,
-        inputSchema: tool.inputSchema,
-        serverName,
-      });
-
-      registerTool({
-        name: fullName,
-        description: `[MCP:${serverName}] ${tool.description || tool.name}`,
-        category: "execute",
-        permission: "confirm",
-        parameters: (tool.inputSchema?.properties || {}) as Record<string, {
-          type: string;
-          description: string;
-          required?: boolean;
-        }>,
-        execute: async (params): Promise<ToolResult> => {
-          return callMcpTool(serverName, tool.name, params);
-        },
-      });
+  const client = new Client(
+    {
+      name: "pi-cy-client",
+      version: "0.1.0",
+    },
+    {
+      capabilities: {},
     }
+  );
+
+  const transport = new StdioClientTransport({
+    command: config.command,
+    args: config.args || [],
+    env: { ...process.env, ...config.env } as Record<string, string>,
+  });
+
+  await client.connect(transport);
+  connectedClients.set(name, client);
+
+  console.log(`[MCP] Connected to server ${name}, requesting tools list...`);
+  const response = await client.listTools();
+  
+  const tools = response.tools || [];
+  for (const tool of tools) {
+    const fullName = `mcp_${name}_${tool.name}`;
+    discoveredTools.set(fullName, {
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema as Record<string, unknown>,
+      serverName: name,
+    });
+
+    registerTool({
+      name: fullName,
+      description: `[MCP:${name}] ${tool.description || tool.name}`,
+      category: "execute",
+      permission: "confirm",
+      parameters: (tool.inputSchema?.properties || {}) as Record<string, {
+        type: string;
+        description: string;
+        required?: boolean;
+      }>,
+      execute: async (params): Promise<ToolResult> => {
+        return callMcpTool(name, tool.name, params);
+      },
+    });
   }
 }
 
@@ -179,71 +102,44 @@ async function callMcpTool(
   toolName: string,
   args: Record<string, unknown>,
 ): Promise<ToolResult> {
-  const proc = connectedServers.get(serverName);
-  if (!proc || !proc.stdin?.writable) {
-    return { output: "", error: `MCP server ${serverName} not connected` };
+  const client = connectedClients.get(serverName);
+  if (!client) {
+    return { output: "", error: `MCP client for ${serverName} not connected` };
   }
 
-  return new Promise((resolve) => {
-    const id = Date.now();
-    const msg = {
-      jsonrpc: "2.0",
-      id,
-      method: "tools/call",
-      params: { name: toolName, arguments: args },
-    };
+  try {
+    const response = await client.callTool({
+      name: toolName,
+      arguments: args,
+    });
 
-    let responseBuffer = "";
+    const content = (response.content || []) as any[];
 
-    const handler = (chunk: Buffer) => {
-      responseBuffer += chunk.toString();
-      const lines = responseBuffer.split("\n");
-      responseBuffer = lines.pop() || "";
+    if (response.isError) {
+      const errText = content
+        .filter((c: any) => c.type === "text")
+        .map((c: any) => c.text)
+        .join("\n");
+      return { output: "", error: errText || "MCP error during call" };
+    }
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        try {
-          const resp = JSON.parse(trimmed);
-          if (resp.id === id) {
-            proc.stdout?.off("data", handler);
-            if (resp.error) {
-              resolve({ output: "", error: resp.error.message || "MCP error" });
-            } else {
-              const content = resp.result?.content;
-              if (Array.isArray(content)) {
-                const text = content
-                  .filter((c: { type: string }) => c.type === "text")
-                  .map((c: { text: string }) => c.text)
-                  .join("\n");
-                resolve({ output: text });
-              } else {
-                resolve({ output: JSON.stringify(resp.result) });
-              }
-            }
-            return;
-          }
-        } catch { /* ignore */ }
-      }
-    };
-
-    proc.stdout?.on("data", handler);
-    proc.stdin?.write(JSON.stringify(msg) + "\n");
-
-    setTimeout(() => {
-      proc.stdout?.off("data", handler);
-      resolve({ output: "", error: "MCP call timeout" });
-    }, 30000);
-  });
+    const text = content
+      .filter((c: any) => c.type === "text")
+      .map((c: any) => c.text)
+      .join("\n");
+    return { output: text };
+  } catch (e) {
+    return { output: "", error: (e as Error).message };
+  }
 }
 
 export function shutdownMcp(): void {
-  for (const [name, proc] of connectedServers) {
+  for (const [name, client] of connectedClients) {
     try {
-      proc.kill();
-      console.log(`[MCP] Shut down ${name}`);
+      client.close().catch(() => {});
+      console.log(`[MCP] Closed client connection to ${name}`);
     } catch { /* ignore */ }
   }
-  connectedServers.clear();
+  connectedClients.clear();
   discoveredTools.clear();
 }

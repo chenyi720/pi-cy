@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { registerTool } from "./registry.js";
 
-const WORKTREE_BASE = ".git/worktrees-pi";
+const WORKTREE_BASE = "worktrees-pi";
 
 function ensureWorktreeDir(): string {
   const base = path.join(process.cwd(), WORKTREE_BASE);
@@ -124,7 +124,7 @@ registerTool({
         windowsHide: true,
         shell: true,
         maxBuffer: 1024 * 1024,
-      });
+      } as any) as string;
       return { output: output.trim() || "(no output)" };
     } catch (e) {
       const err = e as { stdout?: string; stderr?: string; message?: string };

@@ -8,6 +8,8 @@ import { executeTool } from "./tools/executor.js";
 
 let piProc: ChildProcess | null = null;
 let rpcBuf = "";
+let assistantTextAccumulator = "";
+const executedToolCallIds = new Set<string>();
 
 type BroadcastFn = (msg: Record<string, unknown>) => void;
 
@@ -78,6 +80,8 @@ export function startPi(opts: RpcStartOptions = {}): void {
     cwd: targetCwd,
   });
   rpcBuf = "";
+  assistantTextAccumulator = "";
+  executedToolCallIds.clear();
 
   async function handleToolCall(jsonStr: string): Promise<void> {
     try {
@@ -120,13 +124,26 @@ export function startPi(opts: RpcStartOptions = {}): void {
         const parsed = JSON.parse(t);
         broadcastRef(parsed);
 
+        if (parsed.type === "message_start") {
+          assistantTextAccumulator = "";
+          executedToolCallIds.clear();
+        }
+
         // Intercept tool_call blocks in message_update
         if (parsed.type === "message_update" && parsed.delta) {
           for (const d of parsed.delta) {
             if (d.type === "text" && d.text) {
-              const toolMatch = d.text.match(/```tool_call\s*\n(\{[\s\S]*?\})\s*\n```/);
-              if (toolMatch) {
-                handleToolCall(toolMatch[1]);
+              assistantTextAccumulator += d.text;
+              
+              const regex = /```tool_call\s*\n(\{[\s\S]*?\})\s*\n```/g;
+              let match;
+              while ((match = regex.exec(assistantTextAccumulator)) !== null) {
+                const jsonStr = match[1];
+                const key = jsonStr.trim();
+                if (!executedToolCallIds.has(key)) {
+                  executedToolCallIds.add(key);
+                  handleToolCall(jsonStr);
+                }
               }
             }
           }

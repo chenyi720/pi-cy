@@ -63,3 +63,6 @@ temp/
 # Build cache
 dist-server/
 tsconfig.tsbuildinfo
+
+# PI-CY Git Worktrees
+worktrees-pi/

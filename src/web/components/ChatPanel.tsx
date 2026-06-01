@@ -30,12 +30,12 @@ export function ChatPanel() {
           className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
         >
           <div
-            className={`max-w-[85%] rounded-lg px-4 py-3 ${
+            className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm transition-all duration-200 ${
               msg.role === "user"
-                ? "bg-blue-600 text-white"
+                ? "bg-blue-600/90 backdrop-blur-sm text-white border border-blue-500/20 shadow-[0_4px_12px_rgba(37,99,235,0.15)]"
                 : msg.role === "system"
-                  ? "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-sm"
-                  : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                  ? "bg-yellow-50/85 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-sm border border-yellow-200/30 backdrop-blur-sm"
+                  : "bg-white/85 dark:bg-gray-850/80 border border-white/50 dark:border-gray-700/30 backdrop-blur-md text-slate-800 dark:text-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
             }`}
           >
             {msg.role === "user" ? (
