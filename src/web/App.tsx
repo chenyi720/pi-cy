@@ -35,11 +35,12 @@ import { PlanView } from "./components/PlanView";
 import { AgentPanel } from "./components/AgentPanel";
 import { TaskPanel } from "./components/TaskPanel";
 import { HookManager } from "./components/HookManager";
+import { WelcomeDashboard } from "./components/WelcomeDashboard";
 import { loadChanges } from "./stores/changes";
 import "./styles/themes.css";
 import "highlight.js/styles/github-dark.css";
 
-type SidebarTab = "files" | "search" | "git" | "sessions" | "image" | "terminal" | "skills" | "mcp" | "worktrees" | "plans" | "agents" | "tasks" | "hooks";
+type SidebarTab = "files" | "search" | "git" | "sessions" | "image" | "skills" | "plans";
 
 interface SessionTab {
   id: string;
@@ -62,6 +63,16 @@ export default function App() {
   ]);
   const [activeTabId, setActiveTabId] = useState("default");
   const [workspacePath, setWorkspacePath] = useState("");
+  
+  // Bottom terminal states
+  const [terminalVisible, setTerminalVisible] = useState(false);
+  const [terminalHeight, setTerminalHeight] = useState(220);
+  const [terminalResizing, setTerminalResizing] = useState(false);
+
+  // Sub-tabs in Left Sidebar
+  const [orchestratorSubTab, setOrchestratorSubTab] = useState<"plans" | "agents" | "tasks" | "hooks">("plans");
+  const [skillsSubTab, setSkillsSubTab] = useState<"skills" | "mcp">("skills");
+
   const { errors, addError, dismissError } = useErrorHandler();
 
   useEffect(() => {
@@ -129,6 +140,28 @@ export default function App() {
     [sessionTabs, activeTabId],
   );
 
+  // Bottom terminal drag resizing
+  const handleTerminalMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setTerminalResizing(true);
+    const startY = e.clientY;
+    const startHeight = terminalHeight;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const delta = startY - ev.clientY;
+      setTerminalHeight(Math.min(500, Math.max(100, startHeight + delta)));
+    };
+
+    const onMouseUp = () => {
+      setTerminalResizing(false);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  };
+
   // Keyboard shortcuts
   useKeyBindings([
     { key: "n", ctrl: true, action: handleNewSession, description: "New session" },
@@ -137,6 +170,12 @@ export default function App() {
       ctrl: true,
       action: () => setSidebarVisible((v) => !v),
       description: "Toggle sidebar",
+    },
+    {
+      key: "`",
+      ctrl: true,
+      action: () => setTerminalVisible((v) => !v),
+      description: "Toggle terminal",
     },
     {
       key: "f",
@@ -295,41 +334,47 @@ export default function App() {
 
   const fileName = openFile?.path.split(/[/\\]/).pop() || "";
 
-  const sidebarTabs: Array<{ id: SidebarTab; label: string; tooltip: string }> = [
+  // Activity Bar Navigation Definition
+  const activityTabs: Array<{ id: SidebarTab; label: string; tooltip: string }> = [
     { id: "files", label: "📁", tooltip: "文件浏览器" },
-    { id: "search", label: "🔍", tooltip: "内容搜索" },
-    { id: "git", label: "🌿", tooltip: "Git 变更" },
-    { id: "sessions", label: "📜", tooltip: "历史会话" },
-    { id: "image", label: "🖼️", tooltip: "ComfyUI 生图" },
-    { id: "terminal", label: "💻", tooltip: "本地终端" },
-    { id: "skills", label: "⚡", tooltip: "技能列表" },
-    { id: "mcp", label: "🔌", tooltip: "MCP 服务" },
-    { id: "worktrees", label: "🌳", tooltip: "Git 工作区" },
-    { id: "plans", label: "📋", tooltip: "实施计划" },
-    { id: "agents", label: "🤖", tooltip: "自主智能体" },
-    { id: "tasks", label: "✅", tooltip: "任务清单" },
-    { id: "hooks", label: "🪝", tooltip: "事件钩子" },
+    { id: "search", label: "🔍", tooltip: "全局内容搜索" },
+    { id: "git", label: "🌿", tooltip: "Git 源代码管理" },
+    { id: "plans", label: "📋", tooltip: "计划编排与多智能体 Swarm" },
+    { id: "skills", label: "⚡", tooltip: "沙盒技能与 MCP" },
+    { id: "image", label: "🖼️", tooltip: "ComfyUI 艺术生图" },
+    { id: "sessions", label: "📜", tooltip: "历史会话日志" },
   ];
+
+  const handleActivityTabClick = (tabId: SidebarTab) => {
+    if (sidebarTab === tabId && sidebarVisible) {
+      setSidebarVisible(false);
+    } else {
+      setSidebarTab(tabId);
+      setSidebarVisible(true);
+    }
+  };
 
   return (
     <PermissionProvider>
       <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-3 py-1.5 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-white/30 dark:border-gray-700/30 shadow-sm">
+        
+        {/* Global Top Header */}
+        <div className="flex items-center justify-between px-3 py-1.5 bg-white/85 dark:bg-gray-900/80 backdrop-blur-md border-b border-white/30 dark:border-gray-800/30 shadow-sm z-40">
           <div className="flex items-center gap-2">
-            <span className="text-base font-bold text-gray-900 dark:text-white">PI-CY</span>
-            <span className="text-[10px] text-gray-400">v0.1.0</span>
+            <span className="text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">PI-CY</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">v0.1.0</span>
+            <span className="h-4 w-[1px] bg-gray-200 dark:bg-gray-700 mx-1" />
             <ModelSelector />
 
             {/* Session tabs */}
-            <div className="flex ml-3 border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
+            <div className="flex ml-3 border border-gray-200/80 dark:border-gray-700/80 rounded overflow-hidden shadow-sm">
               {sessionTabs.map((tab) => (
                 <div
                   key={tab.id}
-                  className={`flex items-center px-2 py-0.5 text-xs cursor-pointer ${
+                  className={`flex items-center px-2.5 py-0.5 text-xs cursor-pointer transition-colors ${
                     tab.id === activeTabId
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      ? "bg-blue-600 text-white font-medium shadow-inner"
+                      : "bg-gray-100/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-700/60"
                   }`}
                   onClick={() => setActiveTabId(tab.id)}
                 >
@@ -340,7 +385,7 @@ export default function App() {
                         e.stopPropagation();
                         handleCloseTab(tab.id);
                       }}
-                      className="ml-1 text-[10px] opacity-60 hover:opacity-100"
+                      className="ml-1.5 text-[9px] opacity-60 hover:opacity-100 transition-opacity"
                     >
                       ✕
                     </button>
@@ -349,163 +394,328 @@ export default function App() {
               ))}
               <button
                 onClick={handleNewSession}
-                className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-400 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
+                className="px-2 py-0.5 text-xs bg-gray-100/60 dark:bg-gray-800/60 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 transition-colors"
                 title="新建会话 (Ctrl+N)"
               >
                 +
               </button>
             </div>
+          </div>
 
-            {/* Sidebar tabs */}
-            <div className="flex ml-2 border border-white/30 dark:border-gray-700 rounded overflow-hidden shadow-sm">
-              {sidebarTabs.map((t) => (
+          <div className="flex items-center gap-3 text-xs text-gray-400">
+            <ThemeToggle />
+            <button
+              onClick={() => setShowHelp((v) => !v)}
+              className="hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              title="快捷键帮助 (Ctrl+/)"
+            >
+              快捷键
+            </button>
+            <span className="h-3 w-[1px] bg-gray-200 dark:bg-gray-700" />
+            <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+            <span className="text-gray-500 dark:text-gray-400 font-medium">
+              {connected ? "已连接" : "未连接"}
+            </span>
+          </div>
+        </div>
+
+        {/* Global Keyboard Shortcut Helper Overlay */}
+        {showHelp && (
+          <div
+            className="absolute top-12 right-4 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-72 space-y-3"
+            onClick={() => setShowHelp(false)}
+          >
+            <div className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">键盘快捷键</div>
+            <div className="space-y-1.5">
+              {KEYBINDINGS_HELP.map((h) => (
+                <div key={h.key} className="flex justify-between items-center py-0.5 text-xs border-b border-gray-100 dark:border-gray-800/50 last:border-0 pb-1">
+                  <span className="font-semibold text-gray-600 dark:text-gray-300 font-mono bg-gray-50 dark:bg-gray-800 px-1 py-0.5 rounded border border-gray-200/55 dark:border-gray-700/50">{h.key}</span>
+                  <span className="text-gray-500 dark:text-gray-400">{h.description}</span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center py-0.5 text-xs">
+                <span className="font-semibold text-gray-600 dark:text-gray-300 font-mono bg-gray-50 dark:bg-gray-800 px-1 py-0.5 rounded border border-gray-200/55 dark:border-gray-700/50">Ctrl + `</span>
+                <span className="text-gray-500 dark:text-gray-400">折叠/展开底部终端</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Body Viewport */}
+        <div className="flex-1 flex overflow-hidden">
+          
+          {/* 1. Far-Left Activity Bar (48px) */}
+          <div className="activity-bar">
+            <div className="activity-btn-group">
+              {activityTabs.map((t) => (
                 <button
                   key={t.id}
-                  onClick={() => {
-                    if (sidebarTab === t.id && sidebarVisible) {
-                      setSidebarVisible(false);
-                    } else {
-                      setSidebarTab(t.id);
-                      setSidebarVisible(true);
-                    }
-                  }}
+                  onClick={() => handleActivityTabClick(t.id)}
                   title={t.tooltip}
-                  className={`px-1.5 py-0.5 text-[11px] transition-all duration-150 ${
-                    sidebarTab === t.id && sidebarVisible
-                      ? "bg-blue-600/90 text-white shadow-inner font-semibold"
-                      : "bg-white/40 dark:bg-gray-800/40 text-gray-500 hover:bg-white/70 dark:hover:bg-gray-750/70"
-                  }`}
+                  className={`activity-btn ${sidebarTab === t.id && sidebarVisible ? "active" : ""}`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
+            <div className="flex flex-col gap-3 items-center mb-2">
+              <button
+                onClick={() => setTerminalVisible(v => !v)}
+                title="折叠/展开终端"
+                className={`activity-btn ${terminalVisible ? "active" : ""}`}
+              >
+                💻
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <ThemeToggle />
-            <button
-              onClick={() => setShowHelp((v) => !v)}
-              className="hover:text-gray-600"
-              title="快捷键 (Ctrl+/)"
-            >
-              快捷键
-            </button>
-            <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
-            {connected ? "已连接" : "未连接"}
-          </div>
-        </div>
-
-        {/* Help overlay */}
-        {showHelp && (
-          <div
-            className="absolute top-10 right-4 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-3 w-64"
-            onClick={() => setShowHelp(false)}
-          >
-            <div className="text-xs font-semibold text-gray-500 mb-2">快捷键</div>
-            {KEYBINDINGS_HELP.map((h) => (
-              <div key={h.key} className="flex justify-between py-0.5 text-xs">
-                <span className="font-mono text-gray-600 dark:text-gray-300">{h.key}</span>
-                <span className="text-gray-400">{h.description}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Main content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Left sidebar */}
+          {/* 2. Left Collapsible resizable sidebar (250px) */}
           {sidebarVisible && (
             <Sidebar side="left" defaultWidth={260}>
-              {sidebarTab === "files" && (
-                <FileTree rootPath={workspacePath} onFileClick={handleFileClick} />
-              )}
-              {sidebarTab === "search" && (
-                <FileSearch rootPath={workspacePath} onResultClick={handleFileClick} />
-              )}
-              {sidebarTab === "git" && (
-                <>
-                  <GitChangesPanel onFileClick={handleFileClick} />
-                  <ChangePanel onFileClick={handleFileClick} />
-                </>
-              )}
-              {sidebarTab === "sessions" && (
-                <SessionHistory
-                  onLoadSession={handleLoadSession}
-                  currentSessionPath={
-                    sessionTabs.find((t) => t.id === activeTabId)?.sessionPath
-                  }
-                />
-              )}
-              {sidebarTab === "image" && (
-                <ImageGenerator />
-              )}
-              {sidebarTab === "terminal" && (
-                <TerminalPanel />
-              )}
-              {sidebarTab === "skills" && (
-                <SkillManager />
-              )}
-              {sidebarTab === "mcp" && (
-                <McpSettings />
-              )}
-              {sidebarTab === "worktrees" && (
-                <GitWorktreePanel />
-              )}
-              {sidebarTab === "plans" && (
-                <PlanView />
-              )}
-              {sidebarTab === "agents" && (
-                <AgentPanel />
-              )}
-              {sidebarTab === "tasks" && (
-                <TaskPanel />
-              )}
-              {sidebarTab === "hooks" && (
-                <HookManager />
-              )}
-            </Sidebar>
-          )}
-
-          {/* Center: Chat */}
-          <div className="flex-1 flex flex-col min-w-0">
-            <ChatPanel />
-            <ChatInput />
-          </div>
-
-          {/* Right: Editor */}
-          {openFile && (
-            <Sidebar side="right" defaultWidth={500}>
-              <div className="h-full flex flex-col">
-                <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                  <span className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate">
-                    {fileName}
+              <div className="h-full flex flex-col overflow-hidden bg-white/40 dark:bg-gray-900/40 backdrop-blur-md">
+                
+                {/* Sidebar Active Tab Title */}
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                    {sidebarTab === "files" ? "项目管理器" :
+                     sidebarTab === "search" ? "全局搜索" :
+                     sidebarTab === "git" ? "源代码管理" :
+                     sidebarTab === "plans" ? "协同编排画布" :
+                     sidebarTab === "skills" ? "开发者沙盒" :
+                     sidebarTab === "image" ? "ComfyUI 艺术画廊" : "历史会话日志"}
                   </span>
                   <button
-                    onClick={() => setOpenFile(null)}
-                    className="text-gray-400 hover:text-gray-600 text-xs ml-2"
+                    onClick={() => setSidebarVisible(false)}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-[10px]"
+                    title="收起侧边栏"
                   >
-                    ✕
+                    ◀
                   </button>
                 </div>
-                <div className="flex-1">
-                  {fileLoading ? (
-                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                      加载中...
+
+                {/* Sidebar Inner Scroll Content */}
+                <div className="flex-1 overflow-y-auto">
+                  {sidebarTab === "files" && (
+                    <div className="flex flex-col h-full">
+                      <div className="flex-1 overflow-y-auto min-h-0">
+                        <FileTree rootPath={workspacePath} onFileClick={handleFileClick} />
+                      </div>
+                      <div className="border-t border-gray-200 dark:border-gray-800 p-2">
+                        <GitWorktreePanel />
+                      </div>
                     </div>
-                  ) : (
-                    <CodeEditor filePath={openFile.path} content={openFile.content} readOnly={false} />
+                  )}
+                  {sidebarTab === "search" && (
+                    <FileSearch rootPath={workspacePath} onResultClick={handleFileClick} />
+                  )}
+                  {sidebarTab === "git" && (
+                    <div className="flex flex-col gap-2 p-2">
+                      <GitChangesPanel onFileClick={handleFileClick} />
+                      <ChangePanel onFileClick={handleFileClick} />
+                      <GitWorktreePanel />
+                    </div>
+                  )}
+                  {sidebarTab === "sessions" && (
+                    <SessionHistory
+                      onLoadSession={handleLoadSession}
+                      currentSessionPath={
+                        sessionTabs.find((t) => t.id === activeTabId)?.sessionPath
+                      }
+                    />
+                  )}
+                  {sidebarTab === "image" && (
+                    <ImageGenerator />
+                  )}
+                  
+                  {/* Skills Sub-Tab container */}
+                  {sidebarTab === "skills" && (
+                    <div className="h-full flex flex-col">
+                      <div className="flex border-b border-gray-200 dark:border-gray-800 p-1.5 gap-1 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
+                        <button
+                          onClick={() => setSkillsSubTab("skills")}
+                          className={`flex-1 py-1 text-xs font-semibold rounded-lg transition-all ${
+                            skillsSubTab === "skills"
+                              ? "bg-blue-600 text-white shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40"
+                          }`}
+                        >
+                          自定义技能
+                        </button>
+                        <button
+                          onClick={() => setSkillsSubTab("mcp")}
+                          className={`flex-1 py-1 text-xs font-semibold rounded-lg transition-all ${
+                            skillsSubTab === "mcp"
+                              ? "bg-blue-600 text-white shadow-sm"
+                              : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40"
+                          }`}
+                        >
+                          MCP 服务
+                        </button>
+                      </div>
+                      <div className="flex-1 overflow-y-auto min-h-0">
+                        {skillsSubTab === "skills" ? <SkillManager /> : <McpSettings />}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Plan / Swarm Sub-Tab container */}
+                  {sidebarTab === "plans" && (
+                    <div className="h-full flex flex-col">
+                      <div className="flex flex-wrap border-b border-gray-200 dark:border-gray-800 p-1 gap-0.5 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
+                        {(["plans", "agents", "tasks", "hooks"] as const).map((sub) => (
+                          <button
+                            key={sub}
+                            onClick={() => setOrchestratorSubTab(sub)}
+                            className={`flex-1 py-1 text-[10px] font-semibold rounded-lg transition-all capitalize truncate ${
+                              orchestratorSubTab === sub
+                                ? "bg-blue-600 text-white shadow-sm"
+                                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40"
+                            }`}
+                            title={sub}
+                          >
+                            {sub === "plans" ? "计划" : sub === "agents" ? "协同" : sub === "tasks" ? "清单" : "事件"}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex-1 overflow-y-auto min-h-0">
+                        {orchestratorSubTab === "plans" && <PlanView />}
+                        {orchestratorSubTab === "agents" && <AgentPanel />}
+                        {orchestratorSubTab === "tasks" && <TaskPanel />}
+                        {orchestratorSubTab === "hooks" && <HookManager />}
+                      </div>
+                    </div>
                   )}
                 </div>
+
               </div>
             </Sidebar>
           )}
+
+          {/* 3. Center Workspace Area (Monaco Editor & Collapsible terminal) */}
+          <div className="flex-1 flex flex-col min-w-0 bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm relative">
+            
+            {/* Editor viewport or Welcome dashboard */}
+            <div className="flex-1 flex flex-col relative min-h-0 overflow-hidden">
+              {openFile ? (
+                <div className="h-full flex flex-col">
+                  {/* File Tab Header */}
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-blue-500 dark:text-blue-400 font-mono select-none">📄</span>
+                      <span className="text-xs font-mono text-gray-700 dark:text-gray-200 truncate select-all">
+                        {fileName}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setOpenFile(null)}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs ml-2 hover:bg-gray-200/50 dark:hover:bg-gray-800/50 w-5 h-5 rounded flex items-center justify-center transition-colors"
+                      title="关闭编辑器"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {/* Code Editor block */}
+                  <div className="flex-1 min-h-0 relative">
+                    {fileLoading ? (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-sm bg-white/60 dark:bg-gray-950/60">
+                        <span className="animate-spin mr-2">⏳</span> 加载源码中...
+                      </div>
+                    ) : (
+                      <CodeEditor filePath={openFile.path} content={openFile.content} readOnly={false} />
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <WelcomeDashboard
+                  workspacePath={workspacePath}
+                  onTabSelect={(tab, subTab) => {
+                    setSidebarTab(tab);
+                    setSidebarVisible(true);
+                    if (tab === "plans" && subTab) {
+                      setOrchestratorSubTab(subTab as any);
+                    }
+                    if (tab === "skills" && subTab) {
+                      setSkillsSubTab(subTab as any);
+                    }
+                  }}
+                  onNewSession={handleNewSession}
+                  toggleHelp={() => setShowHelp(v => !v)}
+                  toggleTerminal={() => setTerminalVisible(v => !v)}
+                />
+              )}
+            </div>
+
+            {/* Collapsible Bottom Terminal */}
+            {terminalVisible && (
+              <div
+                className="bottom-terminal-container"
+                style={{ height: `${terminalHeight}px` }}
+              >
+                {/* Resizing mouse handle */}
+                <div
+                  className={`bottom-terminal-resizer ${terminalResizing ? "active" : ""}`}
+                  onMouseDown={handleTerminalMouseDown}
+                />
+                
+                {/* Terminal Header */}
+                <div className="flex items-center justify-between px-3 py-1 bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-150 dark:border-gray-800 select-none">
+                  <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                    SYSTEM SHELL TERMINAL
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setTerminalHeight(220)}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-[10px] px-1 hover:bg-gray-200/50 dark:hover:bg-gray-850"
+                      title="重置高度"
+                    >
+                      ⟲
+                    </button>
+                    <button
+                      onClick={() => setTerminalVisible(false)}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs font-bold leading-none hover:bg-gray-200/50 dark:hover:bg-gray-850 w-4 h-4 rounded flex items-center justify-center"
+                      title="收起终端"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex-1 relative min-h-0 overflow-hidden bg-gray-950">
+                  <TerminalPanel />
+                </div>
+              </div>
+            )}
+
+          </div>
+
+          {/* 4. Right Collapsible resizable AI Chat sidebar (380px) */}
+          <Sidebar side="right" defaultWidth={380} minWidth={280} maxWidth={600}>
+            <div className="h-full flex flex-col bg-white/40 dark:bg-gray-900/40 backdrop-blur-md">
+              
+              {/* Chat Titlebar Header inside Sidebar */}
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-150 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 select-none">
+                <span className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                  AI 智能体助手
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold">{connected ? "在线就绪" : "断开连接"}</span>
+                </div>
+              </div>
+
+              {/* Chat Content & Input Panels */}
+              <ChatPanel />
+              <ChatInput />
+
+            </div>
+          </Sidebar>
+
         </div>
 
-        {/* Status Bar */}
+        {/* Global bottom Status Bar */}
         <StatusBar />
 
-        {/* Error Toasts */}
+        {/* Global Toast Error Notifications */}
         <ErrorToast errors={errors} onDismiss={dismissError} />
       </div>
     </PermissionProvider>
