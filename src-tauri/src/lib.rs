@@ -72,9 +72,9 @@ pub fn run() {
             // Register global shortcut (Ctrl+Shift+P) to toggle main window
             use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState, GlobalShortcutExt};
             let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyP);
-            app.global_shortcut().register(shortcut)?;
-            app.global_shortcut().on_shortcut(move |app_handle, sc, ev| {
-                if ev.state == ShortcutState::Pressed && sc == &shortcut {
+            let shortcut_clone = shortcut.clone();
+            app.global_shortcut().on_shortcut(shortcut_clone, move |app_handle, _sc, ev| {
+                if ev.state() == ShortcutState::Pressed {
                     if let Some(window) = app_handle.get_webview_window("main") {
                         if window.is_visible().unwrap_or(false) {
                             let _ = window.hide();
@@ -84,7 +84,8 @@ pub fn run() {
                         }
                     }
                 }
-            });
+            })?;
+            app.global_shortcut().register(shortcut)?;
 
             Ok(())
         })
