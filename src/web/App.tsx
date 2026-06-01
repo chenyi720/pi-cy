@@ -31,11 +31,15 @@ import { ChangePanel } from "./components/ChangePanel";
 import { SkillManager } from "./components/SkillManager";
 import { McpSettings } from "./components/McpSettings";
 import { GitWorktreePanel } from "./components/GitWorktreePanel";
+import { PlanView } from "./components/PlanView";
+import { AgentPanel } from "./components/AgentPanel";
+import { TaskPanel } from "./components/TaskPanel";
+import { HookManager } from "./components/HookManager";
 import { loadChanges } from "./stores/changes";
 import "./styles/themes.css";
 import "highlight.js/styles/github-dark.css";
 
-type SidebarTab = "files" | "search" | "git" | "sessions" | "image" | "terminal" | "skills" | "mcp" | "worktrees";
+type SidebarTab = "files" | "search" | "git" | "sessions" | "image" | "terminal" | "skills" | "mcp" | "worktrees" | "plans" | "agents" | "tasks" | "hooks";
 
 interface SessionTab {
   id: string;
@@ -291,16 +295,20 @@ export default function App() {
 
   const fileName = openFile?.path.split(/[/\\]/).pop() || "";
 
-  const sidebarTabs: Array<{ id: SidebarTab; label: string }> = [
-    { id: "files", label: "\u6587\u4ef6" },
-    { id: "search", label: "\u641c\u7d22" },
-    { id: "git", label: "Git" },
-    { id: "sessions", label: "\u5386\u53f2" },
-    { id: "image", label: "\u751f\u56fe" },
-    { id: "terminal", label: "\u7ec8\u7aef" },
-    { id: "skills", label: "\u6280\u80fd" },
-    { id: "mcp", label: "MCP" },
-    { id: "worktrees", label: "\u5de5\u4f5c\u533a" },
+  const sidebarTabs: Array<{ id: SidebarTab; label: string; tooltip: string }> = [
+    { id: "files", label: "📁", tooltip: "文件浏览器" },
+    { id: "search", label: "🔍", tooltip: "内容搜索" },
+    { id: "git", label: "🌿", tooltip: "Git 变更" },
+    { id: "sessions", label: "📜", tooltip: "历史会话" },
+    { id: "image", label: "🖼️", tooltip: "ComfyUI 生图" },
+    { id: "terminal", label: "💻", tooltip: "本地终端" },
+    { id: "skills", label: "⚡", tooltip: "技能列表" },
+    { id: "mcp", label: "🔌", tooltip: "MCP 服务" },
+    { id: "worktrees", label: "🌳", tooltip: "Git 工作区" },
+    { id: "plans", label: "📋", tooltip: "实施计划" },
+    { id: "agents", label: "🤖", tooltip: "自主智能体" },
+    { id: "tasks", label: "✅", tooltip: "任务清单" },
+    { id: "hooks", label: "🪝", tooltip: "事件钩子" },
   ];
 
   return (
@@ -349,7 +357,7 @@ export default function App() {
             </div>
 
             {/* Sidebar tabs */}
-            <div className="flex ml-2 border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
+            <div className="flex ml-2 border border-white/30 dark:border-gray-700 rounded overflow-hidden shadow-sm">
               {sidebarTabs.map((t) => (
                 <button
                   key={t.id}
@@ -361,10 +369,11 @@ export default function App() {
                       setSidebarVisible(true);
                     }
                   }}
-                  className={`px-1.5 py-0.5 text-[10px] ${
+                  title={t.tooltip}
+                  className={`px-1.5 py-0.5 text-[11px] transition-all duration-150 ${
                     sidebarTab === t.id && sidebarVisible
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      ? "bg-blue-600/90 text-white shadow-inner font-semibold"
+                      : "bg-white/40 dark:bg-gray-800/40 text-gray-500 hover:bg-white/70 dark:hover:bg-gray-750/70"
                   }`}
                 >
                   {t.label}
@@ -442,6 +451,18 @@ export default function App() {
               )}
               {sidebarTab === "worktrees" && (
                 <GitWorktreePanel />
+              )}
+              {sidebarTab === "plans" && (
+                <PlanView />
+              )}
+              {sidebarTab === "agents" && (
+                <AgentPanel />
+              )}
+              {sidebarTab === "tasks" && (
+                <TaskPanel />
+              )}
+              {sidebarTab === "hooks" && (
+                <HookManager />
               )}
             </Sidebar>
           )}
