@@ -20,6 +20,7 @@
   "author": "PI-CY Community",
   "license": "Apache-2.0",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@monaco-editor/react": "^4.7.0",
     "@xterm/addon-fit": "^0.11.0",
     "highlight.js": "^11.11.1",

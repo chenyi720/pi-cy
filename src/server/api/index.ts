@@ -7,6 +7,9 @@ import { safePath, getProjectDir } from "../security.js";
 import { isAlive } from "../rpc.js";
 import { generateImage, isComfyUIAvailable } from "./comfyui.js";
 import { getToolSchemas, executeTool } from "../tools/index.js";
+import { isMcpInitialized, getDiscoveredMcpTools } from "../mcp/index.js";
+import { getLoadedSkills, invokeSkill } from "../skills/index.js";
+import { getAllHooks, executeHooks } from "../hooks/index.js";
 
 function readJson(filePath: string): unknown {
   try {
@@ -143,6 +146,54 @@ export function setupApi(server: http.Server): void {
       if (!toolName) return sendJson({ error: "tool required" }, 400);
       const result = await executeTool(toolName, params, cwd);
       return sendJson(result);
+    }
+
+    // GET /api/mcp/status
+    if (method === "GET" && url.pathname === "/api/mcp/status") {
+      return sendJson({
+        initialized: isMcpInitialized(),
+        tools: getDiscoveredMcpTools().map((t) => ({
+          name: t.name,
+          server: t.serverName,
+          description: t.description,
+        })),
+      });
+    }
+
+    // GET /api/skills
+    if (method === "GET" && url.pathname === "/api/skills") {
+      return sendJson(getLoadedSkills().map((s) => ({
+        name: s.name,
+        description: s.description,
+        path: s.path,
+      })));
+    }
+
+    // POST /api/skills/invoke
+    if (method === "POST" && url.pathname === "/api/skills/invoke") {
+      const body = await readBody(req);
+      const skillName = body.name as string;
+      if (!skillName) return sendJson({ error: "name required" }, 400);
+      const result = invokeSkill(skillName, body.args as Record<string, string>);
+      if (!result) return sendJson({ error: "skill not found" }, 404);
+      return sendJson({ content: result });
+    }
+
+    // GET /api/hooks
+    if (method === "GET" && url.pathname === "/api/hooks") {
+      return sendJson(getAllHooks());
+    }
+
+    // POST /api/hooks/execute
+    if (method === "POST" && url.pathname === "/api/hooks/execute") {
+      const body = await readBody(req);
+      const event = body.event as string;
+      if (!event) return sendJson({ error: "event required" }, 400);
+      const results = await executeHooks(
+        event as "pre-commit" | "post-edit" | "on-error" | "on-start" | "on-save",
+        (body.context || {}) as Record<string, string>,
+      );
+      return sendJson({ results });
     }
 
     // GET /api/files

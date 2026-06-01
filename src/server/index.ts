@@ -5,6 +5,9 @@ import { setupWebSocket, getBroadcast } from "./ws.js";
 import { setBroadcast, startPi, killPi } from "./rpc.js";
 import { setupApi } from "./api/index.js";
 import { addAllowedRoot, getToolSchemas } from "./tools/index.js";
+import { initMcp, shutdownMcp, getDiscoveredMcpTools } from "./mcp/index.js";
+import { loadSkills, getLoadedSkills } from "./skills/index.js";
+import { getAllHooks } from "./hooks/index.js";
 
 const PORT = Number(process.env.PORT) || 3456;
 
@@ -63,20 +66,32 @@ server.on("error", (err: NodeJS.ErrnoException) => {
 
 // Graceful shutdown
 const shutdown = () => {
+  shutdownMcp();
   killPi();
   process.exit(0);
 };
 process.on("SIGINT", shutdown);
-process.on("exit", () => killPi());
+process.on("exit", () => { shutdownMcp(); killPi(); });
 
 // Initialize tools sandbox with project directory
 addAllowedRoot(process.cwd());
 addAllowedRoot(path.join(process.env.USERPROFILE || process.env.HOME || "", ".pi"));
 
 // Start
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`PI-CY running at http://localhost:${PORT}`);
   console.log(`Tools available: ${getToolSchemas().map((t) => t.name).join(", ")}`);
+
+  loadSkills();
+  console.log(`Skills loaded: ${getLoadedSkills().map((s) => s.name).join(", ")}`);
+  console.log(`Hooks registered: ${getAllHooks().map((h) => h.name).join(", ")}`);
+
+  await initMcp();
+  const mcpTools = getDiscoveredMcpTools();
+  if (mcpTools.length > 0) {
+    console.log(`MCP tools: ${mcpTools.map((t) => `${t.serverName}:${t.name}`).join(", ")}`);
+  }
+
   startPi({
     provider: "xiaomi-token-plan-cn",
     model: "mimo-v2.5-pro",
