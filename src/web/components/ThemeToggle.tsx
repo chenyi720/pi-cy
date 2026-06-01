@@ -51,7 +51,7 @@ export function ThemeToggle() {
     <button
       onClick={cycleTheme}
       className="text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1"
-      title={`Theme: ${theme}`}
+      title={`主题: ${theme === "system" ? "跟随系统" : theme === "light" ? "浅色" : "深色"}`}
     >
       {icons[theme]}
     </button>

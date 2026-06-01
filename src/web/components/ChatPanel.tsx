@@ -18,8 +18,8 @@ export function ChatPanel() {
           <div className="text-center">
             <div className="text-4xl mb-2">🤖</div>
             <div className="text-lg font-medium">PI-CY</div>
-            <div className="text-sm">Powered by Xiaomi MiMo</div>
-            <div className="text-xs mt-2">Send a message to start</div>
+            <div className="text-sm">由小米 MiMo 驱动</div>
+            <div className="text-xs mt-2">发送消息开始对话</div>
           </div>
         </div>
       )}
@@ -45,7 +45,7 @@ export function ChatPanel() {
                 {msg.thinkingContent && (
                   <details className="mb-2 text-xs text-gray-400">
                     <summary className="cursor-pointer hover:text-gray-600">
-                      Thinking...
+                      思考中...
                     </summary>
                     <div className="mt-1 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
                       {msg.thinkingContent}
@@ -70,7 +70,7 @@ export function ChatPanel() {
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3">
             <div className="flex items-center gap-2 text-gray-400 text-sm">
               <span className="animate-spin">⏳</span>
-              <span>Thinking...</span>
+              <span>思考中...</span>
             </div>
           </div>
         </div>

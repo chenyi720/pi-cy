@@ -54,14 +54,14 @@ export function ToolCallPanel({ toolCalls }: Props) {
             {isOpen && (
               <div className="border-t border-gray-200 dark:border-gray-700">
                 <div className="px-3 py-2 text-xs">
-                  <div className="text-gray-500 mb-1">Arguments:</div>
+                  <div className="text-gray-500 mb-1">参数:</div>
                   <pre className="bg-gray-100 dark:bg-gray-900 rounded p-2 overflow-x-auto text-xs">
                     {safeJsonFormat(tc.arguments)}
                   </pre>
                 </div>
                 {tc.result && (
                   <div className="px-3 py-2 text-xs border-t border-gray-200 dark:border-gray-700">
-                    <div className="text-gray-500 mb-1">Result:</div>
+                    <div className="text-gray-500 mb-1">结果:</div>
                     <pre className="bg-gray-100 dark:bg-gray-900 rounded p-2 overflow-x-auto text-xs max-h-60 overflow-y-auto whitespace-pre-wrap">
                       {tc.result}
                     </pre>

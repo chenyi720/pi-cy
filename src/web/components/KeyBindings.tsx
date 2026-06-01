@@ -39,11 +39,11 @@ export function useKeyBindings(bindings: KeyBinding[]) {
 }
 
 export const KEYBINDINGS_HELP: Array<{ key: string; description: string }> = [
-  { key: "Ctrl+N", description: "New session" },
-  { key: "Ctrl+B", description: "Toggle sidebar" },
-  { key: "Ctrl+Shift+F", description: "Toggle search" },
-  { key: "Ctrl+G", description: "Toggle git changes" },
-  { key: "Ctrl+Shift+S", description: "Toggle session history" },
-  { key: "Ctrl+L", description: "Focus input" },
-  { key: "Ctrl+Enter", description: "Send message" },
+  { key: "Ctrl+N", description: "新建会话" },
+  { key: "Ctrl+B", description: "切换侧边栏" },
+  { key: "Ctrl+Shift+F", description: "切换搜索" },
+  { key: "Ctrl+G", description: "切换 Git 变更" },
+  { key: "Ctrl+Shift+S", description: "切换历史会话" },
+  { key: "Ctrl+L", description: "聚焦输入框" },
+  { key: "Ctrl+Enter", description: "发送消息" },
 ];

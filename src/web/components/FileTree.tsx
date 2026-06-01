@@ -109,7 +109,7 @@ export function FileTree({ rootPath, onFileClick }: FileTreeProps) {
   return (
     <div className="h-full overflow-y-auto text-sm">
       <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
-        Explorer
+        文件管理
       </div>
       {entries.map((entry) => (
         <TreeNode key={entry.path} entry={entry} depth={0} onFileClick={onFileClick} expandedDirs={expandedDirs} toggleDir={toggleDir} />

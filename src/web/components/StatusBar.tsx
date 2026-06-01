@@ -11,7 +11,7 @@ export function StatusBar() {
           <span
             className={`w-2 h-2 rounded-full ${isAgentRunning ? "bg-green-500 animate-pulse" : "bg-gray-400"}`}
           />
-          {isAgentRunning ? "Running" : "Idle"}
+          {isAgentRunning ? "运行中" : "空闲"}
         </span>
         <span className="font-mono">
           {currentProvider}/{currentModel}
@@ -21,13 +21,13 @@ export function StatusBar() {
         {tokenUsage && (
           <>
             <span>
-              In: {tokenUsage.input.toLocaleString()}
+              输入: {tokenUsage.input.toLocaleString()}
             </span>
             <span>
-              Out: {tokenUsage.output.toLocaleString()}
+              输出: {tokenUsage.output.toLocaleString()}
             </span>
             <span>
-              Total: {tokenUsage.total.toLocaleString()}
+              总计: {tokenUsage.total.toLocaleString()}
             </span>
           </>
         )}

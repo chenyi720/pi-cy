@@ -15,13 +15,13 @@ interface Props {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  M: { label: "Modified", color: "text-yellow-600 bg-yellow-50" },
-  A: { label: "Added", color: "text-green-600 bg-green-50" },
-  D: { label: "Deleted", color: "text-red-600 bg-red-50" },
-  R: { label: "Renamed", color: "text-blue-600 bg-blue-50" },
-  "?": { label: "Untracked", color: "text-gray-600 bg-gray-50" },
-  "!!": { label: "Ignored", color: "text-gray-400 bg-gray-50" },
-  U: { label: "Conflict", color: "text-red-700 bg-red-100" },
+  M: { label: "已修改", color: "text-yellow-600 bg-yellow-50" },
+  A: { label: "已添加", color: "text-green-600 bg-green-50" },
+  D: { label: "已删除", color: "text-red-600 bg-red-50" },
+  R: { label: "已重命名", color: "text-blue-600 bg-blue-50" },
+  "?": { label: "未跟踪", color: "text-gray-600 bg-gray-50" },
+  "!!": { label: "已忽略", color: "text-gray-400 bg-gray-50" },
+  U: { label: "冲突", color: "text-red-700 bg-red-100" },
 };
 
 export function GitChangesPanel({ onFileClick }: Props) {
@@ -55,11 +55,11 @@ export function GitChangesPanel({ onFileClick }: Props) {
       <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Changes
+            变更
           </div>
           {branch && (
             <div className="text-xs text-gray-400 mt-0.5">
-              branch: <span className="font-mono text-blue-500">{branch}</span>
+              分支: <span className="font-mono text-blue-500">{branch}</span>
             </div>
           )}
         </div>
@@ -67,7 +67,7 @@ export function GitChangesPanel({ onFileClick }: Props) {
           onClick={refresh}
           disabled={loading}
           className="text-xs text-gray-400 hover:text-gray-600 px-1"
-          title="Refresh"
+          title="刷新"
         >
           {loading ? "..." : "↻"}
         </button>
@@ -75,7 +75,7 @@ export function GitChangesPanel({ onFileClick }: Props) {
       <div className="flex-1 overflow-y-auto">
         {files.length === 0 && (
           <div className="px-3 py-4 text-center text-sm text-gray-400">
-            No changes
+            暂无变更
           </div>
         )}
         {files.map((f, i) => {

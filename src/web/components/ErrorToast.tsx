@@ -67,7 +67,7 @@ export function ErrorToast({ errors, onDismiss, onRetry }: Props) {
                 onClick={onRetry}
                 className="text-xs text-red-600 dark:text-red-400 underline mt-1"
               >
-                Retry
+                重试
               </button>
             )}
           </div>

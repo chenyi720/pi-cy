@@ -13,6 +13,9 @@ export default defineConfig(async () => ({
     host: host || false,
     hmr: host ? { protocol: "ws", host, port: 5174 } : undefined,
     watch: { ignored: ["**/src-tauri/**"] },
+    proxy: {
+      "/api": { target: "http://localhost:3456", changeOrigin: true },
+    },
   },
   build: {
     chunkSizeWarningLimit: 600,

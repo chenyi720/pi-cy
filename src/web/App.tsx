@@ -262,11 +262,11 @@ export default function App() {
   const fileName = openFile?.path.split(/[/\\]/).pop() || "";
 
   const sidebarTabs: Array<{ id: SidebarTab; label: string }> = [
-    { id: "files", label: "Files" },
-    { id: "search", label: "Search" },
+    { id: "files", label: "??" },
+    { id: "search", label: "??" },
     { id: "git", label: "Git" },
-    { id: "sessions", label: "History" },
-    { id: "image", label: "Gen" },
+    { id: "sessions", label: "??" },
+    { id: "image", label: "??" },
   ];
 
   return (
@@ -306,7 +306,7 @@ export default function App() {
               <button
                 onClick={handleNewSession}
                 className="px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-400 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
-                title="New Session (Ctrl+N)"
+                title="???? (Ctrl+N)"
               >
                 +
               </button>
@@ -342,12 +342,12 @@ export default function App() {
             <button
               onClick={() => setShowHelp((v) => !v)}
               className="hover:text-gray-600"
-              title="Keyboard shortcuts (Ctrl+/)"
+              title="??? (Ctrl+/)"
             >
               ?
             </button>
             <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
-            {connected ? "Online" : "Offline"}
+            {connected ? "???" : "???"}
           </div>
         </div>
 
@@ -357,7 +357,7 @@ export default function App() {
             className="absolute top-10 right-4 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-3 w-64"
             onClick={() => setShowHelp(false)}
           >
-            <div className="text-xs font-semibold text-gray-500 mb-2">Keyboard Shortcuts</div>
+            <div className="text-xs font-semibold text-gray-500 mb-2">???</div>
             {KEYBINDINGS_HELP.map((h) => (
               <div key={h.key} className="flex justify-between py-0.5 text-xs">
                 <span className="font-mono text-gray-600 dark:text-gray-300">{h.key}</span>
@@ -418,7 +418,7 @@ export default function App() {
                 <div className="flex-1">
                   {fileLoading ? (
                     <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                      Loading...
+                      ???...
                     </div>
                   ) : (
                     <CodeEditor filePath={openFile.path} content={openFile.content} readOnly={false} />

@@ -14,7 +14,7 @@ export function PermissionDialog({ onApprove, onReject, command, description }: 
         <div className="px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
           <div className="flex items-center gap-2">
             <span className="text-yellow-600">⚠️</span>
-            <span className="font-semibold text-yellow-800 dark:text-yellow-200">Permission Required</span>
+            <span className="font-semibold text-yellow-800 dark:text-yellow-200">需要授权</span>
           </div>
         </div>
         <div className="px-4 py-4">
@@ -30,13 +30,13 @@ export function PermissionDialog({ onApprove, onReject, command, description }: 
             onClick={onReject}
             className="px-4 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
-            Reject
+            拒绝
           </button>
           <button
             onClick={onApprove}
             className="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
           >
-            Approve
+            允许
           </button>
         </div>
       </div>

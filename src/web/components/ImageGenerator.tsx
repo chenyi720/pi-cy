@@ -43,22 +43,22 @@ export function ImageGenerator({ onImageGenerated }: Props) {
   return (
     <div className="flex flex-col gap-3 p-3">
       <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-        Image Generation (HiDream O1)
+        图片生成 (HiDream O1)
       </div>
 
       <div>
-        <label className="text-xs text-gray-400 mb-1 block">Prompt</label>
+        <label className="text-xs text-gray-400 mb-1 block">提示词</label>
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="A beautiful sunset over mountains..."
+          placeholder="描述你想生成的图片..."
           rows={3}
           className="w-full px-2 py-1.5 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
         />
       </div>
 
       <div>
-        <label className="text-xs text-gray-400 mb-1 block">Negative Prompt</label>
+        <label className="text-xs text-gray-400 mb-1 block">反向提示词</label>
         <input
           type="text"
           value={negativePrompt}
@@ -69,7 +69,7 @@ export function ImageGenerator({ onImageGenerated }: Props) {
 
       <div className="flex gap-2">
         <div className="flex-1">
-          <label className="text-xs text-gray-400 mb-1 block">Width</label>
+          <label className="text-xs text-gray-400 mb-1 block">宽度</label>
           <select
             value={width}
             onChange={(e) => setWidth(Number(e.target.value))}
@@ -81,7 +81,7 @@ export function ImageGenerator({ onImageGenerated }: Props) {
           </select>
         </div>
         <div className="flex-1">
-          <label className="text-xs text-gray-400 mb-1 block">Height</label>
+          <label className="text-xs text-gray-400 mb-1 block">高度</label>
           <select
             value={height}
             onChange={(e) => setHeight(Number(e.target.value))}
@@ -93,7 +93,7 @@ export function ImageGenerator({ onImageGenerated }: Props) {
           </select>
         </div>
         <div className="flex-1">
-          <label className="text-xs text-gray-400 mb-1 block">Steps</label>
+          <label className="text-xs text-gray-400 mb-1 block">步数</label>
           <select
             value={steps}
             onChange={(e) => setSteps(Number(e.target.value))}
@@ -111,7 +111,7 @@ export function ImageGenerator({ onImageGenerated }: Props) {
         disabled={!prompt.trim() || generating}
         className="w-full px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {generating ? "Generating..." : "Generate Image"}
+        {generating ? "生成中..." : "生成图片"}
       </button>
 
       {error && (
@@ -123,7 +123,7 @@ export function ImageGenerator({ onImageGenerated }: Props) {
           <div className="text-xs text-gray-400 mb-1">Seed: {result.seed}</div>
           <img
             src={`/api/comfyui/image?path=${encodeURIComponent(result.imagePath)}`}
-            alt="Generated"
+            alt="生成的图片"
             className="w-full rounded border border-gray-200 dark:border-gray-700"
           />
         </div>

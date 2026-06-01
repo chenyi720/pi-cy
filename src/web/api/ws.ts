@@ -6,8 +6,11 @@ const handlers = new Set<WsHandler>();
 export function connectWs(): WebSocket {
   if (ws && ws.readyState === WebSocket.OPEN) return ws;
 
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  ws = new WebSocket(`${protocol}//${window.location.host}`);
+  const isDev = import.meta.env.DEV;
+  const wsUrl = isDev
+    ? `ws://${window.location.hostname}:3456`
+    : `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`;
+  ws = new WebSocket(wsUrl);
 
   ws.onopen = () => console.log("WebSocket connected");
   ws.onclose = () => {
