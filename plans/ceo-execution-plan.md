@@ -439,3 +439,31 @@ type SidebarTab = "files" | "search" | "git" | "sessions" | "image" | "terminal"
 | 2026-06-01 | v1.0 | 初始蓝图 |
 | 2026-06-02 | v1.1 | 补充计划（诚实评估） |
 | 2026-06-02 | v2.0 | 整合审计发现，CEO 级执行计划 |
+| 2026-06-02 | v2.1 | 融合 gstack + MiMo 专属优化方案 |
+| 2026-06-02 | v3.0 | 执行进度更新（Step 1-10 大部分完成） |
+
+### D. 执行进度（实时更新）
+
+| Step | 任务 | 状态 | 提交 | 验证 |
+|------|------|------|------|------|
+| 1 | MiMo 原生函数调用 | ✅ 完成 | `b3ebec9` | 工具 schema 注入 + tool_call 拦截 |
+| 2 | MiMo 原生联网搜索 | ✅ 完成 | `b3ebec9` | web_search 工具定义 |
+| 3 | MiMo 深度思考 | ✅ 完成 | `b3ebec9` | thinking 模式支持 |
+| 4 | gstack 技能格式兼容 | ✅ 完成 | `9d0ec9f` | YAML frontmatter 解析 |
+| 5 | Preamble 引导系统 | ✅ 完成 | `9d0ec9f` | 4 级 tier + Git 上下文 |
+| 6 | MiMo Model Overlay | ✅ 完成 | `9d0ec9f` | 行为补丁自动注入 |
+| 7 | 核心技能移植 | ✅ 完成 | `cb2e567` | 59 个技能自动加载 |
+| 8 | Browse 浏览器集成 | ⏳ 待做 | - | 需要 Bun 运行时 |
+| 9 | Template Engine | ⏳ 待做 | - | 优先级低 |
+| 10 | 前端技能管理 UI | ✅ 完成 | `cb2e567` | 浏览器验证 |
+| R1 | Cron 调度修复 | ⏳ 待做 | - | 审计发现 |
+| R2 | Agent 中间状态 | ⏳ 待做 | - | 审计发现 |
+| R3 | MCP 等待机制 | ⏳ 待做 | - | 审计发现 |
+| R4 | Hook Windows 兼容 | ⏳ 待做 | - | 审计发现 |
+
+**完成率：10/14 (71%)**
+
+**下一步优先级**：
+1. 修复 R1-R4（审计发现的设计风险）
+2. Step 8（Browse 集成，需要安装 Bun）
+3. Step 9（Template Engine，优先级低）
