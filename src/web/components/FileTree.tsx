@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useChangeStore } from "../stores/changes";
 
 interface FileEntry {
   name: string;
@@ -17,6 +18,8 @@ interface TreeNodeProps {
 function TreeNode({ entry, depth, onFileClick, expandedDirs, toggleDir }: TreeNodeProps) {
   const isExpanded = expandedDirs.has(entry.path);
   const indent = depth * 16;
+  const { changedFiles } = useChangeStore();
+  const isChanged = changedFiles.has(entry.path);
 
   if (entry.isDir) {
     return (
@@ -41,11 +44,16 @@ function TreeNode({ entry, depth, onFileClick, expandedDirs, toggleDir }: TreeNo
   return (
     <button
       onClick={() => onFileClick(entry.path)}
-      className="w-full flex items-center gap-1 px-2 py-0.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+      className={`w-full flex items-center gap-1 px-2 py-0.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 ${
+        isChanged
+          ? "text-orange-600 dark:text-orange-400 font-medium"
+          : "text-gray-700 dark:text-gray-300"
+      }`}
       style={{ paddingLeft: `${indent + 24}px` }}
     >
       <span>{icon}</span>
       <span className="truncate">{entry.name}</span>
+      {isChanged && <span className="ml-auto text-[10px] text-orange-500 mr-2">●</span>}
     </button>
   );
 }

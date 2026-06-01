@@ -1,5 +1,6 @@
 import Editor, { DiffEditor, type OnMount } from "@monaco-editor/react";
-import { useRef } from "react";
+import { useRef, useCallback, useState } from "react";
+import { executeToolApi } from "../api/tools";
 
 interface Props {
   filePath: string;
@@ -7,6 +8,7 @@ interface Props {
   language?: string;
   readOnly?: boolean;
   onChange?: (value: string) => void;
+  onSave?: (content: string) => void;
 }
 
 function detectLanguage(filePath: string): string {
@@ -22,34 +24,83 @@ function detectLanguage(filePath: string): string {
   return langMap[ext] || "plaintext";
 }
 
-export function CodeEditor({ filePath, content, language, readOnly = true, onChange }: Props) {
+export function CodeEditor({ filePath, content, language, readOnly = true, onChange, onSave }: Props) {
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
-  const handleMount: OnMount = (editor) => {
+  const handleSave = useCallback(async () => {
+    if (!editorRef.current || !onSave) return;
+    const value = editorRef.current.getValue();
+    setSaving(true);
+    setSaveStatus(null);
+    try {
+      const result = await executeToolApi("write_file", { path: filePath, content: value });
+      if (result.error) {
+        setSaveStatus(`错误: ${result.error}`);
+      } else {
+        setSaveStatus("已保存");
+        onSave(value);
+        setTimeout(() => setSaveStatus(null), 2000);
+      }
+    } catch (e) {
+      setSaveStatus(`错误: ${(e as Error).message}`);
+    } finally {
+      setSaving(false);
+    }
+  }, [filePath, onSave]);
+
+  const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
+    if (!readOnly && onSave) {
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        handleSave();
+      });
+    }
   };
 
   return (
-    <div className="h-full w-full">
-      <Editor
-        height="100%"
-        language={language || detectLanguage(filePath)}
-        value={content}
-        onChange={(value) => onChange?.(value || "")}
-        onMount={handleMount}
-        theme="vs-dark"
-        options={{
-          readOnly,
-          minimap: { enabled: false },
-          fontSize: 13,
-          lineNumbers: "on",
-          scrollBeyondLastLine: false,
-          wordWrap: "on",
-          automaticLayout: true,
-          tabSize: 2,
-          padding: { top: 8 },
-        }}
-      />
+    <div className="h-full w-full flex flex-col">
+      {!readOnly && onSave && (
+        <div className="flex items-center justify-between px-3 py-1 bg-gray-800 border-b border-gray-700">
+          <span className="text-[10px] text-gray-400 font-mono">{filePath}</span>
+          <div className="flex items-center gap-2">
+            {saveStatus && (
+              <span className={`text-[10px] ${saveStatus.startsWith("错误") ? "text-red-400" : "text-green-400"}`}>
+                {saveStatus}
+              </span>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-2 py-0.5 text-[10px] rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {saving ? "保存中..." : "保存 (Ctrl+S)"}
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="flex-1">
+        <Editor
+          height="100%"
+          language={language || detectLanguage(filePath)}
+          value={content}
+          onChange={(value) => onChange?.(value || "")}
+          onMount={handleMount}
+          theme="vs-dark"
+          options={{
+            readOnly,
+            minimap: { enabled: false },
+            fontSize: 13,
+            lineNumbers: "on",
+            scrollBeyondLastLine: false,
+            wordWrap: "on",
+            automaticLayout: true,
+            tabSize: 2,
+            padding: { top: 8 },
+          }}
+        />
+      </div>
     </div>
   );
 }

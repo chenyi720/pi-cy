@@ -27,6 +27,8 @@ import { useErrorHandler, ErrorToast } from "./components/ErrorToast";
 import { ImageGenerator } from "./components/ImageGenerator";
 import { ModelSelector } from "./components/ModelSelector";
 import { TerminalPanel } from "./components/TerminalPanel";
+import { ChangePanel } from "./components/ChangePanel";
+import { loadChanges } from "./stores/changes";
 import "./styles/themes.css";
 import "highlight.js/styles/github-dark.css";
 
@@ -56,6 +58,7 @@ export default function App() {
   const { errors, addError, dismissError } = useErrorHandler();
 
   useEffect(() => {
+    loadChanges();
     fetch("/api/config")
       .then((r) => r.json())
       .then((data) => {
@@ -405,7 +408,10 @@ export default function App() {
                 <FileSearch rootPath={workspacePath} onResultClick={handleFileClick} />
               )}
               {sidebarTab === "git" && (
-                <GitChangesPanel onFileClick={handleFileClick} />
+                <>
+                  <GitChangesPanel onFileClick={handleFileClick} />
+                  <ChangePanel onFileClick={handleFileClick} />
+                </>
               )}
               {sidebarTab === "sessions" && (
                 <SessionHistory
