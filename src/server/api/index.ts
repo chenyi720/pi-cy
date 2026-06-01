@@ -3,8 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execSync } from "node:child_process";
-import { safePath, getProjectDir } from "./security.js";
-import { isAlive } from "./rpc.js";
+import { safePath, getProjectDir } from "../security.js";
+import { isAlive } from "../rpc.js";
 import { generateImage, isComfyUIAvailable } from "./comfyui.js";
 
 function readJson(filePath: string): unknown {

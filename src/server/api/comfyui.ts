@@ -171,7 +171,7 @@ export async function generateImage(
   const outPath = path.join(outputDir, outFilename);
   fs.writeFileSync(outPath, imageBuffer);
 
-  return { imagePath: outPath, seed: (workflow["3"] as Record<string, { inputs: { seed: number } }>).inputs.seed as number };
+  return { imagePath: outPath, seed: (workflow["3"] as { inputs: { seed: number } }).inputs.seed };
 }
 
 export function isComfyUIAvailable(): boolean {

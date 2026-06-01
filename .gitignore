@@ -59,3 +59,7 @@ ehthumbs.db
 *.temp
 tmp/
 temp/
+
+# Build cache
+dist-server/
+tsconfig.tsbuildinfo
