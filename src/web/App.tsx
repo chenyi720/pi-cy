@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { connectWs, onWsMessage, startAgent } from "./api/ws";
+import { connectWs, onWsMessage, startAgent, sendWs } from "./api/ws";
 import {
   addAssistantMessageStart,
   updateAssistantMessage,
@@ -18,7 +18,7 @@ import { FileTree } from "./components/FileTree";
 import { CodeEditor } from "./components/Editor";
 import { FileSearch } from "./components/FileSearch";
 import { Sidebar } from "./components/Sidebar";
-import { PermissionProvider } from "./components/PermissionDialog";
+import { PermissionProvider, requestApproval } from "./components/PermissionDialog";
 import { GitChangesPanel } from "./components/GitChangesPanel";
 import { SessionHistory } from "./components/SessionHistory";
 import { useKeyBindings, KEYBINDINGS_HELP } from "./components/KeyBindings";
@@ -265,6 +265,16 @@ export default function App() {
             );
             finalizeAssistantMessage(id);
           }
+          break;
+        }
+        case "permission_request": {
+          const toolId = (msg.tool_call_id as string) || `perm-${Date.now()}`;
+          const toolName = (msg.tool_name as string) || "unknown";
+          const toolArgs = msg.tool_arguments ? JSON.stringify(msg.tool_arguments) : "";
+          const desc = msg.description as string | undefined;
+          requestApproval(`${toolName} ${toolArgs}`.trim(), desc).then((approved) => {
+            sendWs({ type: "permission_response", tool_call_id: toolId, approved });
+          });
           break;
         }
       }
