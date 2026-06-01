@@ -28,11 +28,12 @@ import { ImageGenerator } from "./components/ImageGenerator";
 import { ModelSelector } from "./components/ModelSelector";
 import { TerminalPanel } from "./components/TerminalPanel";
 import { ChangePanel } from "./components/ChangePanel";
+import { SkillManager } from "./components/SkillManager";
 import { loadChanges } from "./stores/changes";
 import "./styles/themes.css";
 import "highlight.js/styles/github-dark.css";
 
-type SidebarTab = "files" | "search" | "git" | "sessions" | "image" | "terminal";
+type SidebarTab = "files" | "search" | "git" | "sessions" | "image" | "terminal" | "skills";
 
 interface SessionTab {
   id: string;
@@ -295,6 +296,7 @@ export default function App() {
     { id: "sessions", label: "\u5386\u53f2" },
     { id: "image", label: "\u751f\u56fe" },
     { id: "terminal", label: "\u7ec8\u7aef" },
+    { id: "skills", label: "\u6280\u80fd" },
   ];
 
   return (
@@ -426,6 +428,9 @@ export default function App() {
               )}
               {sidebarTab === "terminal" && (
                 <TerminalPanel />
+              )}
+              {sidebarTab === "skills" && (
+                <SkillManager />
               )}
             </Sidebar>
           )}
