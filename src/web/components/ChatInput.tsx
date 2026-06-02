@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, type KeyboardEvent, type ClipboardEvent } from "react";
 import { sendChat } from "../api/ws";
-import { addUserMessage, useChatStore } from "../stores/chat";
+import { addUserMessage, useChatStore, clearMessages } from "../stores/chat";
 
 interface AttachedImage {
   base64: string;
@@ -8,12 +8,24 @@ interface AttachedImage {
   preview: string;
 }
 
+const SLASH_COMMANDS = [
+  { cmd: "/generate_image", desc: "调用 ComfyUI 艺术生成设计/前端 Mock 蓝图" },
+  { cmd: "/run_plan", desc: "执行多步骤自主编排计划" },
+  { cmd: "/run_swarm", desc: "启动多智能体协同流水线 (Coder ⇄ Reviewer)" },
+  { cmd: "/clear", desc: "清空当前对话会话历史" },
+];
+
 export function ChatInput() {
   const [text, setText] = useState("");
   const [image, setImage] = useState<AttachedImage | null>(null);
   const { isAgentRunning } = useChatStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-complete dropdown states
+  const [menuType, setMenuType] = useState<"none" | "slash" | "at">("none");
+  const [filteredFiles, setFilteredFiles] = useState<string[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   const readFileAsBase64 = useCallback((file: File): Promise<AttachedImage> => {
     return new Promise((resolve, reject) => {
@@ -62,8 +74,68 @@ export function ChatInput() {
     [readFileAsBase64],
   );
 
+  const handleFileSearch = useCallback(async (query: string) => {
+    try {
+      const res = await fetch(`/api/workspace-files?q=${encodeURIComponent(query)}`);
+      const files = await res.json();
+      setFilteredFiles(files || []);
+    } catch {
+      setFilteredFiles([]);
+    }
+  }, []);
+
+  const handleTextChange = (val: string) => {
+    setText(val);
+
+    const el = textareaRef.current;
+    if (!el) return;
+    const cursorPos = el.selectionStart;
+    const textBeforeCursor = val.slice(0, cursorPos);
+    const words = textBeforeCursor.split(/[\s\n]/);
+    const lastWord = words[words.length - 1] || "";
+
+    if (lastWord.startsWith("/")) {
+      setMenuType("slash");
+      setSelectedIndex(0);
+    } else if (lastWord.startsWith("@")) {
+      setMenuType("at");
+      setSelectedIndex(0);
+      handleFileSearch(lastWord.slice(1));
+    } else {
+      setMenuType("none");
+    }
+  };
+
+  const selectItem = (insertedText: string) => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const cursorPos = el.selectionStart;
+    const textBeforeCursor = text.slice(0, cursorPos);
+    const textAfterCursor = text.slice(cursorPos);
+
+    const words = textBeforeCursor.split(/[\s\n]/);
+    words.pop(); // Remove the slash or at token
+
+    const newTextBefore = words.join(" ") + (words.length > 0 ? " " : "") + insertedText + " ";
+    setText(newTextBefore + textAfterCursor);
+    setMenuType("none");
+
+    setTimeout(() => {
+      el.focus();
+      const newPos = newTextBefore.length;
+      el.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
+
   const handleSend = () => {
     const trimmed = text.trim();
+    if (trimmed === "/clear") {
+      clearMessages();
+      setText("");
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      return;
+    }
+
     if ((!trimmed && !image) || isAgentRunning) return;
 
     const displayText = trimmed || (image ? "请分析这张图片" : "");
@@ -83,6 +155,37 @@ export function ChatInput() {
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (menuType !== "none") {
+      const listLength = menuType === "slash" ? SLASH_COMMANDS.length : filteredFiles.length;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev + 1) % listLength);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev - 1 + listLength) % listLength);
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (listLength > 0) {
+          if (menuType === "slash") {
+            selectItem(SLASH_COMMANDS[selectedIndex].cmd);
+          } else {
+            selectItem(`@${filteredFiles[selectedIndex]}`);
+          }
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMenuType("none");
+        return;
+      }
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -98,9 +201,54 @@ export function ChatInput() {
   };
 
   return (
-    <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border-t border-white/30 dark:border-gray-700/30 px-4 py-3 shadow-[0_-4px_30px_rgba(0,0,0,0.02)]">
+    <div className="relative bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border-t border-white/30 dark:border-gray-700/30 px-4 py-3 shadow-[0_-4px_30px_rgba(0,0,0,0.02)]">
+      
+      {/* Floating autocomplete dropdown */}
+      {menuType !== "none" && (
+        <div className="absolute bottom-full left-4 right-4 mb-2 max-h-52 overflow-y-auto rounded-xl border border-white/20 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-1.5 shadow-xl z-50">
+          {menuType === "slash" && SLASH_COMMANDS.map((item, index) => (
+            <button
+              key={item.cmd}
+              onClick={() => selectItem(item.cmd)}
+              className={`w-full flex flex-col text-left px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                index === selectedIndex
+                  ? "bg-blue-600 text-white font-medium shadow-sm"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+              }`}
+            >
+              <span className="font-mono text-xs font-bold">{item.cmd}</span>
+              <span className={`text-[10px] mt-0.5 ${index === selectedIndex ? "text-blue-100" : "text-gray-400 dark:text-gray-500"}`}>
+                {item.desc}
+              </span>
+            </button>
+          ))}
+
+          {menuType === "at" && filteredFiles.map((file, index) => (
+            <button
+              key={file}
+              onClick={() => selectItem(`@${file}`)}
+              className={`w-full flex items-center px-3 py-1.5 rounded-lg transition-colors text-left font-mono text-xs cursor-pointer ${
+                index === selectedIndex
+                  ? "bg-blue-600 text-white font-medium shadow-sm"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+              }`}
+            >
+              <span className="mr-2">📄</span>
+              <span className="truncate flex-1">{file}</span>
+            </button>
+          ))}
+
+          {menuType === "at" && filteredFiles.length === 0 && (
+            <div className="px-3 py-2 text-xs text-gray-450 dark:text-gray-500 font-mono text-center">
+              未找到匹配的工作区文件
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Image attachments */}
       {image && (
-        <div className="relative inline-block mb-2">
+        <div className="relative inline-block mb-2 animate-fade-in">
           <img
             src={image.preview}
             alt="Attached"
@@ -108,15 +256,16 @@ export function ChatInput() {
           />
           <button
             onClick={() => setImage(null)}
-            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600"
+            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600 shadow"
           >
-            x
+            ✕
           </button>
           <div className="text-[10px] text-gray-400 mt-0.5">
             将使用 mimo-v2.5 识图
           </div>
         </div>
       )}
+
       <div className="flex gap-2 items-end">
         <input
           type="file"
@@ -128,7 +277,7 @@ export function ChatInput() {
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isAgentRunning}
-          className="px-2 py-2 rounded-xl border border-white/40 dark:border-gray-600/40 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-800/80 disabled:opacity-50 transition-colors shadow-sm"
+          className="px-2 py-2 rounded-xl border border-white/40 dark:border-gray-600/40 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-800/80 disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
           title="上传图片（或 Ctrl+V 粘贴）"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,11 +287,11 @@ export function ChatInput() {
         <textarea
           ref={textareaRef}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => handleTextChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           onPaste={handlePaste}
-          placeholder={image ? "描述图片或输入问题..." : "输入消息...（Shift+Enter 换行）"}
+          placeholder={image ? "描述图片或输入问题..." : "输入消息... 输入 / 指令，输入 @ 提及代码文件"}
           rows={1}
           className="flex-1 resize-none rounded-xl border border-white/40 dark:border-gray-650/40 bg-white/70 dark:bg-gray-850/70 backdrop-blur-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:text-white placeholder-gray-400 shadow-sm"
           disabled={isAgentRunning}
@@ -150,7 +299,7 @@ export function ChatInput() {
         <button
           onClick={handleSend}
           disabled={(!text.trim() && !image) || isAgentRunning}
-          className="px-4 py-2 rounded-xl bg-blue-600/90 hover:bg-blue-600 active:bg-blue-700 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_4px_12px_rgba(37,99,235,0.15)]"
+          className="px-4 py-2 rounded-xl bg-blue-600/90 hover:bg-blue-600 active:bg-blue-700 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_4px_12px_rgba(37,99,235,0.15)] cursor-pointer"
         >
           {isAgentRunning ? "..." : "发送"}
         </button>

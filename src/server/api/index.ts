@@ -335,6 +335,51 @@ export function setupApi(server: http.Server): void {
       return sendJson({ ok: cancelled });
     }
 
+    // GET /api/workspace-files
+    if (method === "GET" && url.pathname === "/api/workspace-files") {
+      const q = url.searchParams.get("q") || "";
+      const searchPath = url.searchParams.get("path") || getProjectDir() || process.cwd();
+      const safeSearchPath = safePath(searchPath);
+      if (!safeSearchPath || !fs.existsSync(safeSearchPath)) return sendJson([]);
+
+      const scanDir = (dir: string, baseDir: string): string[] => {
+        let results: string[] = [];
+        try {
+          const list = fs.readdirSync(dir, { withFileTypes: true });
+          for (const item of list) {
+            const res = path.join(dir, item.name);
+            const relative = path.relative(baseDir, res).replace(/\\/g, "/");
+            if (item.isDirectory()) {
+              if (
+                item.name === "node_modules" ||
+                item.name === ".git" ||
+                item.name === "dist" ||
+                item.name === "dist-server" ||
+                item.name === "build" ||
+                item.name === ".gemini"
+              ) {
+                continue;
+              }
+              results = results.concat(scanDir(res, baseDir));
+            } else {
+              results.push(relative);
+            }
+          }
+        } catch { /* ignore */ }
+        return results;
+      };
+
+      try {
+        const allFiles = scanDir(safeSearchPath, safeSearchPath);
+        const filtered = allFiles
+          .filter((f) => f.toLowerCase().includes(q.toLowerCase()))
+          .slice(0, 10);
+        return sendJson(filtered);
+      } catch {
+        return sendJson([]);
+      }
+    }
+
     // GET /api/files
     if (method === "GET" && url.pathname === "/api/files") {
       const dir = safePath(url.searchParams.get("path") || undefined);
