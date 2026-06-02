@@ -32,12 +32,12 @@ export function ChatPanel() {
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[88%] rounded-[20px] px-4 py-3.5 shadow-sm transition-all duration-300 relative group overflow-hidden ${
+              className={`max-w-[95%] rounded-2xl px-4 py-3.5 transition-all duration-200 relative group ${
                 msg.role === "user"
-                  ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white border border-blue-500/30 shadow-[0_4px_16px_rgba(37,99,235,0.2)] rounded-br-sm"
+                  ? "bg-slate-100 dark:bg-zinc-800/80 text-slate-900 dark:text-zinc-100 ml-auto border border-slate-200/50 dark:border-white/5 shadow-sm"
                   : msg.role === "system"
-                    ? "bg-amber-50/90 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs border border-amber-200/40 dark:border-amber-700/30 backdrop-blur-md rounded-bl-sm"
-                    : "bg-white/95 dark:bg-[#1E1E24]/90 border border-black/[0.04] dark:border-white/[0.04] backdrop-blur-xl text-slate-800 dark:text-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.04)] rounded-bl-sm"
+                    ? "bg-amber-50/50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 text-xs border border-amber-200/40 dark:border-amber-700/30 rounded-lg"
+                    : "bg-transparent text-slate-800 dark:text-slate-200 w-full"
               }`}
             >
               {msg.role === "user" ? (

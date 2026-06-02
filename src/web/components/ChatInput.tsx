@@ -201,7 +201,7 @@ export function ChatInput() {
   };
 
   return (
-    <div className="relative bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border-t border-white/30 dark:border-gray-700/30 px-4 py-3 shadow-[0_-4px_30px_rgba(0,0,0,0.02)]">
+    <div className="relative bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-t border-slate-200/50 dark:border-white/5 px-5 py-4">
       
       {/* Floating autocomplete dropdown */}
       {menuType !== "none" && (
@@ -277,7 +277,7 @@ export function ChatInput() {
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isAgentRunning}
-          className="px-2 py-2 rounded-xl border border-white/40 dark:border-gray-600/40 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/80 dark:hover:bg-gray-800/80 disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
+          className="px-2 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-700 disabled:opacity-50 transition-all shadow-sm cursor-pointer"
           title="上传图片（或 Ctrl+V 粘贴）"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -293,13 +293,13 @@ export function ChatInput() {
           onPaste={handlePaste}
           placeholder={image ? "描述图片或输入问题..." : "输入消息... 输入 / 指令，输入 @ 提及代码文件"}
           rows={1}
-          className="flex-1 resize-none rounded-xl border border-white/40 dark:border-gray-650/40 bg-white/70 dark:bg-gray-850/70 backdrop-blur-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:text-white placeholder-gray-400 shadow-sm"
+          className="flex-1 resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-white/20 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 shadow-sm transition-all"
           disabled={isAgentRunning}
         />
         <button
           onClick={handleSend}
           disabled={(!text.trim() && !image) || isAgentRunning}
-          className="px-4 py-2 rounded-xl bg-blue-600/90 hover:bg-blue-600 active:bg-blue-700 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_4px_12px_rgba(37,99,235,0.15)] cursor-pointer"
+          className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-slate-800 dark:hover:bg-zinc-200 active:scale-95 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1 min-w-[70px]"
         >
           {isAgentRunning ? "..." : "发送"}
         </button>
