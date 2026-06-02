@@ -94,17 +94,17 @@ export function ThinkingTimeline() {
 
   if (!isOpen) {
     return (
-      <div className="h-8 border-t border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-900/80 flex items-center justify-between px-3 shrink-0 transition-all select-none">
+      <div className="h-9 border-t border-gray-200/50 dark:border-white/5 bg-gray-50/40 dark:bg-[#1E1E24]/60 backdrop-blur-md flex items-center justify-between px-4 shrink-0 transition-all select-none hover:bg-gray-100/50 dark:hover:bg-white/5">
         <button
           onClick={() => setIsOpen(true)}
-          className="text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium flex items-center gap-1 cursor-pointer"
+          className="text-[11px] text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium flex items-center gap-1.5 cursor-pointer"
         >
-          <span>⚙</span>
-          <span>显示 AI 思考路径 ({events.length} 个节点)</span>
+          <span className={`${events.some(e => e.status === "running") ? "animate-spin text-blue-500" : ""}`}>⚙</span>
+          <span>AI 思考路径 ({events.length} 节点)</span>
         </button>
         <button
           onClick={() => setIsOpen(true)}
-          className="text-gray-400 hover:text-gray-650 dark:hover:text-gray-200 text-xs"
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs transition-transform hover:-translate-y-0.5"
           title="展开面板"
         >
           ▲
@@ -114,16 +114,16 @@ export function ThinkingTimeline() {
   }
 
   return (
-    <div className="h-52 border-t border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 flex flex-col shrink-0 transition-all duration-300">
+    <div className="h-56 border-t border-gray-200/50 dark:border-white/5 bg-white/70 dark:bg-[#18181D]/80 backdrop-blur-xl flex flex-col shrink-0 transition-all duration-300 shadow-[0_-4px_24px_rgba(0,0,0,0.02)]">
       {/* Title bar */}
-      <div className="px-3 py-1.5 border-b border-gray-150 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-950/30 select-none">
-        <span className="text-[10px] font-bold text-gray-555 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
-          <span>⚙</span>
+      <div className="px-4 py-2 border-b border-gray-150/50 dark:border-white/5 flex items-center justify-between bg-gray-50/30 dark:bg-black/20 select-none">
+        <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+          <span className={`${events.some(e => e.status === "running") ? "animate-spin text-blue-500" : ""}`}>⚙</span>
           <span>AI 思考与工具时间轴</span>
         </span>
         <button
           onClick={() => setIsOpen(false)}
-          className="text-gray-455 hover:text-gray-600 dark:hover:text-gray-200 text-xs cursor-pointer"
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs cursor-pointer transition-transform hover:translate-y-0.5"
           title="折叠面板"
         >
           ▼

@@ -343,6 +343,27 @@ export function AgentPanel() {
                         </span>
                       </div>
 
+                      {/* Swarm Execution Metrics & Orchestrator Controls */}
+                      {isExpanded && (
+                        <div className="flex items-center justify-between bg-white/40 dark:bg-gray-800/40 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 mb-3 shadow-inner text-[10px]">
+                          <div className="flex items-center gap-4 text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1"><span className="text-gray-400">⏱</span> {Math.floor((Date.now() - swarm.createdAt) / 1000)}s Elapsed</span>
+                            <span className="flex items-center gap-1"><span className="text-gray-400">🔄</span> {swarm.steps.length} Nodes Active</span>
+                            <span className="flex items-center gap-1"><span className="text-blue-400">⚡</span> Live Stream</span>
+                          </div>
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            {swarm.status === "running" ? (
+                              <>
+                                <button className="px-2 py-1 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-200 transition-colors font-medium">⏸ 暂停 (Pause)</button>
+                                <button className="px-2 py-1 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 transition-colors font-medium">⏹ 终止 (Kill)</button>
+                              </>
+                            ) : swarm.status !== "completed" ? (
+                              <button className="px-2 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 transition-colors font-medium">▶ 恢复 (Resume)</button>
+                            ) : null}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="text-[10px] text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
                         任务: {swarm.task}
                       </div>
@@ -360,17 +381,18 @@ export function AgentPanel() {
                                   setActiveStepTab((prev) => ({ ...prev, [swarm.id]: idx }));
                                   setExpandedSwarmId(swarm.id);
                                 }}
-                                className={`px-4 py-2 rounded-xl border flex flex-col items-center justify-center min-w-28 text-center cursor-pointer transition-all shadow-sm ${
+                                className={`px-4 py-2.5 rounded-xl border flex flex-col items-center justify-center min-w-[120px] text-center cursor-pointer transition-all shadow-sm relative overflow-hidden ${
                                   isStepActive
-                                    ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 shadow-blue-500/10 ring-2 ring-blue-500/30 animate-pulse"
+                                    ? "border-blue-500 bg-blue-50/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 shadow-blue-500/20 ring-2 ring-blue-500/40"
                                     : isStepDone
-                                      ? "border-green-500 bg-green-50/50 dark:bg-green-900/20 text-green-600 dark:text-green-300"
-                                      : "border-gray-200 dark:border-gray-700 bg-white/40 dark:bg-gray-800/40 text-gray-450 dark:text-gray-500"
+                                      ? "border-green-500/50 bg-green-50/50 dark:bg-green-900/10 text-green-650 dark:text-green-400"
+                                      : "border-gray-200/50 dark:border-gray-700/50 bg-white/30 dark:bg-gray-800/20 text-gray-400 dark:text-gray-500 hover:border-gray-300 dark:hover:border-gray-600"
                                 }`}
                               >
-                                <span className="text-[10px] font-bold uppercase">{step.agentName}</span>
-                                <span className="text-[9px] mt-0.5">
-                                  {step.status === "completed" ? "✓ 完成" : step.status === "running" ? "⚙ 激活" : "待命"}
+                                {isStepActive && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 dark:via-white/5 to-transparent animate-[shimmer_2s_infinite] -skew-x-12" />}
+                                <span className="text-[10.5px] font-bold uppercase z-10">{step.agentName}</span>
+                                <span className="text-[9px] mt-1 font-medium z-10 flex items-center gap-1">
+                                  {step.status === "completed" ? "✓ 执行成功" : step.status === "running" ? "⚙ 任务执行中" : "待命节点"}
                                 </span>
                               </div>
 
