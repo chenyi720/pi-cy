@@ -94,63 +94,71 @@ export function ThinkingTimeline() {
 
   if (!isOpen) {
     return (
-      <div className="w-[40px] border-l border-white/30 dark:border-gray-750 bg-white/20 dark:bg-gray-850/20 flex flex-col items-center pt-4 transition-all">
+      <div className="h-8 border-t border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-900/80 flex items-center justify-between px-3 shrink-0 transition-all select-none">
         <button
           onClick={() => setIsOpen(true)}
-          className="text-xs text-gray-500 hover:text-blue-500 font-bold transform rotate-90 origin-left translate-x-2.5 whitespace-nowrap"
-          title="展开思考日志"
+          className="text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium flex items-center gap-1 cursor-pointer"
         >
-          ⚙ 思考路径 ➔
+          <span>⚙</span>
+          <span>显示 AI 思考路径 ({events.length} 个节点)</span>
+        </button>
+        <button
+          onClick={() => setIsOpen(true)}
+          className="text-gray-400 hover:text-gray-650 dark:hover:text-gray-200 text-xs"
+          title="展开面板"
+        >
+          ▲
         </button>
       </div>
     );
   }
 
   return (
-    <div className="w-72 border-l border-white/30 dark:border-gray-750 bg-white/30 dark:bg-gray-850/20 flex flex-col h-full overflow-hidden transition-all duration-300">
+    <div className="h-52 border-t border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 flex flex-col shrink-0 transition-all duration-300">
       {/* Title bar */}
-      <div className="px-3 py-2 border-b border-white/30 dark:border-gray-750 flex items-center justify-between bg-white/40 dark:bg-gray-850/40">
-        <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-          AI 思考路径时间轴
+      <div className="px-3 py-1.5 border-b border-gray-150 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-950/30 select-none">
+        <span className="text-[10px] font-bold text-gray-555 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+          <span>⚙</span>
+          <span>AI 思考与工具时间轴</span>
         </span>
         <button
           onClick={() => setIsOpen(false)}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs"
-          title="折叠时间轴"
+          className="text-gray-455 hover:text-gray-600 dark:hover:text-gray-200 text-xs cursor-pointer"
+          title="折叠面板"
         >
-          ⇥
+          ▼
         </button>
       </div>
 
       {/* Events Stream */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {events.length === 0 ? (
-          <div className="text-center text-[10px] text-gray-400 dark:text-gray-500 py-12">
-            等待您发送消息以追踪 AI 工具执行链路...
+          <div className="text-center text-[10px] text-gray-450 dark:text-gray-500 py-6">
+            等待发送消息以追踪 AI 工具执行链...
           </div>
         ) : (
-          <div className="relative pl-4 border-l-2 border-slate-200 dark:border-gray-800 space-y-4">
+          <div className="relative pl-3 border-l border-slate-200 dark:border-gray-850 space-y-2.5">
             {events.map((e, index) => {
               const isRunning = e.status === "running";
               const isError = e.status === "error";
               const dotColor = isRunning
-                ? "bg-blue-500 ring-4 ring-blue-500/20"
+                ? "bg-blue-500 ring-2 ring-blue-500/20"
                 : isError
                   ? "bg-red-500"
                   : "bg-green-500";
 
               return (
-                <div key={e.id + index} className="relative group text-[11px] animate-fade-in">
+                <div key={e.id + index} className="relative group text-[11.5px] animate-fade-in">
                   {/* Pulse Dot */}
-                  <span className={`absolute -left-[21px] top-1.5 w-2 h-2 rounded-full transition-all ${dotColor} ${isRunning ? "animate-pulse" : ""}`} />
+                  <span className={`absolute -left-[17px] top-1 w-1.5 h-1.5 rounded-full transition-all ${dotColor} ${isRunning ? "animate-pulse" : ""}`} />
 
                   {/* Header info */}
-                  <div className="flex justify-between items-center font-semibold">
-                    <span className={isRunning ? "text-blue-600 dark:text-blue-400" : isError ? "text-red-500" : "text-gray-700 dark:text-gray-300"}>
+                  <div className="flex justify-between items-center">
+                    <span className={`font-medium ${isRunning ? "text-blue-600 dark:text-blue-400" : isError ? "text-red-500" : "text-gray-700 dark:text-gray-300"}`}>
                       {e.label}
                     </span>
                     {e.duration !== undefined && (
-                      <span className="text-[8px] text-gray-400 dark:text-gray-500">
+                      <span className="text-[9px] text-gray-400 dark:text-gray-500 font-mono">
                         {(e.duration / 1000).toFixed(2)}s
                       </span>
                     )}
@@ -158,11 +166,11 @@ export function ThinkingTimeline() {
 
                   {/* Event details */}
                   {e.details && (
-                    <details className="mt-1 cursor-pointer">
-                      <summary className="text-[9px] text-gray-450 hover:text-gray-600 dark:hover:text-gray-300 outline-none">
-                        展开输入与执行日志
+                    <details className="mt-0.5 cursor-pointer">
+                      <summary className="text-[9px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 outline-none">
+                        详情日志
                       </summary>
-                      <pre className="mt-1.5 p-2 rounded-lg bg-gray-950 text-[8.5px] font-mono text-green-400 border border-gray-900 max-h-40 overflow-y-auto whitespace-pre-wrap leading-normal shadow-inner select-all">
+                      <pre className="mt-1 p-1.5 rounded bg-gray-950 text-[8.5px] font-mono text-green-400 border border-gray-900 max-h-24 overflow-y-auto whitespace-pre-wrap leading-normal shadow-inner select-all">
                         {e.details}
                       </pre>
                     </details>
