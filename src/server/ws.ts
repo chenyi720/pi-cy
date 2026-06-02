@@ -1,10 +1,13 @@
 import { WebSocketServer, type WebSocket } from "ws";
 import { spawn } from "node:child_process";
 import type http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
 import type { RpcStartOptions } from "./types.js";
 import { startPi, piSend, killPi, isAlive } from "./rpc.js";
 import { analyzeImage } from "./api/vision.js";
 import { generateImage, isComfyUIAvailable } from "./api/comfyui.js";
+import { safePath, getProjectDir } from "./security.js";
 
 const clients = new Set<WebSocket>();
 let activeCmdProc: ReturnType<typeof spawn> | null = null;
@@ -88,9 +91,57 @@ async function handleChatMessage(
     broadcast({ type: "message_end", usage: { input_tokens: 0, output_tokens: 0 } });
     return;
   }
+  // Parse @file references and inject their contents
+  let enrichedText = text;
+  const fileMentions = text.match(/@([^\s\n\/\\][^\s\n]*)/g);
+  if (fileMentions) {
+    let contextBlocks = "";
+    const projectDir = getProjectDir() || process.cwd();
+    const safeProjectDir = safePath(projectDir);
+
+    if (safeProjectDir) {
+      for (const mention of fileMentions) {
+        const relativePath = mention.slice(1); // strip '@'
+        const fullPath = path.resolve(safeProjectDir, relativePath);
+        const validatedPath = safePath(fullPath);
+
+        // Security check: ensure path is under the project workspace directory
+        if (
+          validatedPath &&
+          validatedPath.startsWith(safeProjectDir) &&
+          fs.existsSync(validatedPath) &&
+          fs.statSync(validatedPath).isFile()
+        ) {
+          try {
+            // Check size limits (max 100KB) to prevent context token overflow
+            const size = fs.statSync(validatedPath).size;
+            if (size > 100 * 1024) {
+              contextBlocks += `\n\n--- [File Context: ${relativePath} (Omitted - file exceeds 100KB)] ---\n`;
+              continue;
+            }
+
+            // Exclude common binary files if user accidentally typed them
+            const ext = path.extname(validatedPath).toLowerCase();
+            const binaryExtensions = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".zip", ".tar", ".gz", ".exe", ".dll", ".so", ".dylib", ".pdf", ".mp4", ".mp3", ".wav"]);
+            if (binaryExtensions.has(ext)) {
+              contextBlocks += `\n\n--- [File Context: ${relativePath} (Omitted - binary file type)] ---\n`;
+              continue;
+            }
+
+            const content = fs.readFileSync(validatedPath, "utf-8");
+            contextBlocks += `\n\n--- [File Context: ${relativePath}] ---\n\`\`\`\n${content}\n\`\`\`\n`;
+          } catch { /* ignore */ }
+        }
+      }
+    }
+
+    if (contextBlocks) {
+      enrichedText = text + contextBlocks;
+    }
+  }
 
   broadcast({ type: "message_start" });
-  piSend({ type: "user_input", text });
+  piSend({ type: "user_input", text: enrichedText });
 }
 
 export function setupWebSocket(server: http.Server): WebSocketServer {
