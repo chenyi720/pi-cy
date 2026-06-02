@@ -693,13 +693,18 @@ export default function App() {
             <div className="h-full flex flex-col bg-white/40 dark:bg-gray-900/40 backdrop-blur-md">
               
               {/* Chat Titlebar Header inside Sidebar */}
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-150 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 select-none">
-                <span className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                  AI 智能体助手
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold">{connected ? "在线就绪" : "断开连接"}</span>
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200/40 dark:border-gray-800/40 bg-gradient-to-r from-white/50 to-blue-50/30 dark:from-gray-900/50 dark:to-gray-800/30 backdrop-blur-md select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-widest">
+                    AI 智能体
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-100/60 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold">
+                    MiMo
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${connected ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.4)]" : "bg-red-500"}`} />
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">{connected ? "在线" : "离线"}</span>
                 </div>
               </div>
 

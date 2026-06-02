@@ -8,5 +8,7 @@ export {
   deleteAgentInstance,
   getAllSwarmInstances,
   spawnSwarm,
+  sendAgentMessage,
+  getAgentMessages,
 } from "./manager.js";
-export type { AgentDefinition, AgentInstance, AgentStatus } from "./types.js";
+export type { AgentDefinition, AgentInstance, AgentStatus, SwarmInstance, SwarmAgentStep, AgentMessage } from "./types.js";

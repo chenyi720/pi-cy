@@ -1,10 +1,13 @@
-export type AgentStatus = "idle" | "running" | "completed" | "failed";
+export type AgentStatus = "idle" | "running" | "completed" | "failed" | "waiting";
 
 export interface AgentDefinition {
   name: string;
   description: string;
   systemPrompt?: string;
   tools?: string[];
+  color?: string;
+  icon?: string;
+  model?: string;
 }
 
 export interface AgentInstance {
@@ -17,6 +20,8 @@ export interface AgentInstance {
   error?: string;
   createdAt: number;
   updatedAt: number;
+  parentId?: string;
+  childIds?: string[];
 }
 
 export interface SwarmAgentStep {
@@ -25,6 +30,7 @@ export interface SwarmAgentStep {
   output?: string;
   result?: string;
   error?: string;
+  parallelGroup?: number;
 }
 
 export interface SwarmInstance {
@@ -35,4 +41,13 @@ export interface SwarmInstance {
   steps: SwarmAgentStep[];
   createdAt: number;
   updatedAt: number;
+  context?: Record<string, unknown>;
+}
+
+export interface AgentMessage {
+  from: string;
+  to: string;
+  content: string;
+  timestamp: number;
+  type: "task" | "result" | "feedback" | "question";
 }

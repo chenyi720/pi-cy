@@ -11,7 +11,7 @@ import { isMcpInitialized, getDiscoveredMcpTools } from "../mcp/index.js";
 import { getLoadedSkills, invokeSkill, reloadSkills } from "../skills/index.js";
 import { getAllHooks, executeHooks } from "../hooks/index.js";
 import { createPlan, getAllPlans, updateStepStatus, runStep } from "../plan/index.js";
-import { spawnAgent, getAllAgentInstances, getAllAgentDefinitions, getAllSwarmInstances, spawnSwarm } from "../agents/index.js";
+import { spawnAgent, getAllAgentInstances, getAllAgentDefinitions, getAllSwarmInstances, spawnSwarm, getAgentMessages } from "../agents/index.js";
 import { createTask, getAllTasks, startTask, cancelTask } from "../tasks/index.js";
 
 function readJson(filePath: string): unknown {
