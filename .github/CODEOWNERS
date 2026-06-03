@@ -1,0 +1,11 @@
+# Default owner for everything
+* @chenyi720
+
+# CI/CD workflows
+.github/ @chenyi720
+
+# Tauri backend (Rust)
+src-tauri/ @chenyi720
+
+# Frontend source
+src/ @chenyi720
