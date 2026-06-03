@@ -93,7 +93,7 @@ async function handleChatMessage(
   }
   // Parse @file references and inject their contents
   let enrichedText = text;
-  const fileMentions = text.match(/@([^\s\n\/\\][^\s\n]*)/g);
+  const fileMentions = text.match(/@([^\s\n/\\][^\s\n]*)/g);
   if (fileMentions) {
     let contextBlocks = "";
     const projectDir = getProjectDir() || process.cwd();
