@@ -1,5 +1,4 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicedoc/schema/master/tauri/2.0.0/config.schema.json",
   "productName": "PI-CY",
   "version": "0.1.0",
   "identifier": "com.pi-cy.app",

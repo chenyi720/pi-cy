@@ -66,3 +66,19 @@ tsconfig.tsbuildinfo
 
 # PI-CY Git Worktrees
 worktrees-pi/
+
+# Tool configs (local / generated)
+.gstack/
+.kilo/
+.claude/settings.local.json
+.mcp.json
+
+# Planning & solution docs (internal)
+plans/
+solution.*
+screenshot-*.png
+
+# Generated scripts & media (one-off)
+scripts/generate-*.py
+scripts/take_screenshot.mjs
+media/

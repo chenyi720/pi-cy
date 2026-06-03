@@ -7,9 +7,9 @@
 **基于小米 MiMo 的 AI 编程助手**
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
-[![Release](https://img.shields.io/github/v/release/nicedoc/pi-cy)](https://github.com/nicedoc/pi-cy/releases)
-[![Downloads](https://img.shields.io/github/downloads/nicedoc/pi-cy/total)](https://github.com/nicedoc/pi-cy/releases)
-[![Stars](https://img.shields.io/github/stars/nicedoc/pi-cy?style=social)](https://github.com/nicedoc/pi-cy/stargazers)
+[![Release](https://img.shields.io/github/v/release/chenyi720/pi-cy)](https://github.com/chenyi720/pi-cy/releases)
+[![Downloads](https://img.shields.io/github/downloads/chenyi720/pi-cy/total)](https://github.com/chenyi720/pi-cy/releases)
+[![Stars](https://img.shields.io/github/stars/chenyi720/pi-cy?style=social)](https://github.com/chenyi720/pi-cy/stargazers)
 
 [English](./README.md) | [中文](./README.zh-CN.md)
 
@@ -34,15 +34,15 @@
 
 | 平台 | 下载 |
 |------|------|
-| Windows (.msi) | [最新版本](https://github.com/nicedoc/pi-cy/releases/latest) |
-| macOS (.dmg) | [最新版本](https://github.com/nicedoc/pi-cy/releases/latest) |
-| Linux (.AppImage) | [最新版本](https://github.com/nicedoc/pi-cy/releases/latest) |
+| Windows (.msi) | [最新版本](https://github.com/chenyi720/pi-cy/releases/latest) |
+| macOS (.dmg) | [最新版本](https://github.com/chenyi720/pi-cy/releases/latest) |
+| Linux (.AppImage) | [最新版本](https://github.com/chenyi720/pi-cy/releases/latest) |
 
 ### 从源码构建
 
 ```bash
 # 前置要求: Node.js >= 22, Rust >= 1.75
-git clone https://github.com/nicedoc/pi-cy.git
+git clone https://github.com/chenyi720/pi-cy.git
 cd pi-cy
 npm install
 cargo tauri dev
