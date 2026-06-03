@@ -34,7 +34,7 @@
     "xterm": "^5.3.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.28.0",
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.1.7",
     "@tauri-apps/cli": "^2",
     "@types/node": "^22.19.0",
