@@ -202,41 +202,44 @@ export function ChatInput() {
 
   return (
     <div className="relative bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-t border-slate-200/50 dark:border-white/5 px-5 py-4">
-      
       {/* Floating autocomplete dropdown */}
       {menuType !== "none" && (
         <div className="absolute bottom-full left-4 right-4 mb-2 max-h-52 overflow-y-auto rounded-xl border border-white/20 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl p-1.5 shadow-xl z-50">
-          {menuType === "slash" && SLASH_COMMANDS.map((item, index) => (
-            <button
-              key={item.cmd}
-              onClick={() => selectItem(item.cmd)}
-              className={`w-full flex flex-col text-left px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                index === selectedIndex
-                  ? "bg-blue-600 text-white font-medium shadow-sm"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
-              }`}
-            >
-              <span className="font-mono text-xs font-bold">{item.cmd}</span>
-              <span className={`text-[10px] mt-0.5 ${index === selectedIndex ? "text-blue-100" : "text-gray-400 dark:text-gray-500"}`}>
-                {item.desc}
-              </span>
-            </button>
-          ))}
+          {menuType === "slash" &&
+            SLASH_COMMANDS.map((item, index) => (
+              <button
+                key={item.cmd}
+                onClick={() => selectItem(item.cmd)}
+                className={`w-full flex flex-col text-left px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                  index === selectedIndex
+                    ? "bg-blue-600 text-white font-medium shadow-sm"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <span className="font-mono text-xs font-bold">{item.cmd}</span>
+                <span
+                  className={`text-[10px] mt-0.5 ${index === selectedIndex ? "text-blue-100" : "text-gray-400 dark:text-gray-500"}`}
+                >
+                  {item.desc}
+                </span>
+              </button>
+            ))}
 
-          {menuType === "at" && filteredFiles.map((file, index) => (
-            <button
-              key={file}
-              onClick={() => selectItem(`@${file}`)}
-              className={`w-full flex items-center px-3 py-1.5 rounded-lg transition-colors text-left font-mono text-xs cursor-pointer ${
-                index === selectedIndex
-                  ? "bg-blue-600 text-white font-medium shadow-sm"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
-              }`}
-            >
-              <span className="mr-2">📄</span>
-              <span className="truncate flex-1">{file}</span>
-            </button>
-          ))}
+          {menuType === "at" &&
+            filteredFiles.map((file, index) => (
+              <button
+                key={file}
+                onClick={() => selectItem(`@${file}`)}
+                className={`w-full flex items-center px-3 py-1.5 rounded-lg transition-colors text-left font-mono text-xs cursor-pointer ${
+                  index === selectedIndex
+                    ? "bg-blue-600 text-white font-medium shadow-sm"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+                }`}
+              >
+                <span className="mr-2">📄</span>
+                <span className="truncate flex-1">{file}</span>
+              </button>
+            ))}
 
           {menuType === "at" && filteredFiles.length === 0 && (
             <div className="px-3 py-2 text-xs text-gray-450 dark:text-gray-500 font-mono text-center">
@@ -260,9 +263,7 @@ export function ChatInput() {
           >
             ✕
           </button>
-          <div className="text-[10px] text-gray-400 mt-0.5">
-            将使用 mimo-v2.5 识图
-          </div>
+          <div className="text-[10px] text-gray-400 mt-0.5">将使用 mimo-v2.5 识图</div>
         </div>
       )}
 
@@ -281,7 +282,12 @@ export function ChatInput() {
           title="上传图片（或 Ctrl+V 粘贴）"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
           </svg>
         </button>
         <textarea
@@ -291,32 +297,59 @@ export function ChatInput() {
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           onPaste={handlePaste}
-          placeholder={image ? "描述图片或输入问题..." : "输入消息... 输入 / 指令，输入 @ 提及代码文件"}
+          placeholder={
+            image ? "描述图片或输入问题..." : "输入消息... 输入 / 指令，输入 @ 提及代码文件"
+          }
           rows={1}
           className="flex-1 resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-white/20 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 shadow-sm transition-all"
           disabled={isAgentRunning}
         />
         <button
           onClick={isAgentRunning ? () => killAgent() : handleSend}
-          disabled={(!text.trim() && !image) && !isAgentRunning}
-          className={isAgentRunning
-            ? "w-8 h-8 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-slate-800 dark:hover:bg-zinc-200 active:scale-95 transition-all shadow-sm cursor-pointer flex items-center justify-center"
-            : "px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-slate-800 dark:hover:bg-zinc-200 active:scale-95 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1 min-w-[70px]"
+          disabled={!text.trim() && !image && !isAgentRunning}
+          className={
+            isAgentRunning
+              ? "w-8 h-8 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-slate-800 dark:hover:bg-zinc-200 active:scale-95 transition-all shadow-sm cursor-pointer flex items-center justify-center"
+              : "px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-slate-800 dark:hover:bg-zinc-200 active:scale-95 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1 min-w-[70px]"
           }
         >
           {isAgentRunning ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-          ) : "发送"}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="6" width="12" height="12" rx="2" />
+            </svg>
+          ) : (
+            "发送"
+          )}
         </button>
       </div>
       {/* Status bar */}
       <div className="flex items-center gap-3 px-1 text-[11px] text-slate-400 dark:text-slate-500">
         <span className="flex items-center gap-1">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+          </svg>
           Claude
         </span>
         <span className="flex items-center gap-1">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
           Edit automatically
         </span>
       </div>

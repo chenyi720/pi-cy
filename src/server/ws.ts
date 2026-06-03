@@ -17,7 +17,9 @@ function broadcast(msg: Record<string, unknown>): void {
   for (const ws of clients) {
     try {
       ws.send(data);
-    } catch { /* client disconnected */ }
+    } catch {
+      /* client disconnected */
+    }
   }
 }
 
@@ -122,7 +124,24 @@ async function handleChatMessage(
 
             // Exclude common binary files if user accidentally typed them
             const ext = path.extname(validatedPath).toLowerCase();
-            const binaryExtensions = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".zip", ".tar", ".gz", ".exe", ".dll", ".so", ".dylib", ".pdf", ".mp4", ".mp3", ".wav"]);
+            const binaryExtensions = new Set([
+              ".png",
+              ".jpg",
+              ".jpeg",
+              ".gif",
+              ".webp",
+              ".zip",
+              ".tar",
+              ".gz",
+              ".exe",
+              ".dll",
+              ".so",
+              ".dylib",
+              ".pdf",
+              ".mp4",
+              ".mp3",
+              ".wav",
+            ]);
             if (binaryExtensions.has(ext)) {
               contextBlocks += `\n\n--- [File Context: ${relativePath} (Omitted - binary file type)] ---\n`;
               continue;
@@ -130,7 +149,9 @@ async function handleChatMessage(
 
             const content = fs.readFileSync(validatedPath, "utf-8");
             contextBlocks += `\n\n--- [File Context: ${relativePath}] ---\n\`\`\`\n${content}\n\`\`\`\n`;
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
       }
     }
@@ -179,7 +200,11 @@ export function setupWebSocket(server: http.Server): WebSocketServer {
             break;
           case "run_command": {
             if (activeCmdProc) {
-              try { activeCmdProc.kill(); } catch { /* already dead */ }
+              try {
+                activeCmdProc.kill();
+              } catch {
+                /* already dead */
+              }
               activeCmdProc = null;
             }
             const targetCwd = msg.cwd || process.cwd();
@@ -198,7 +223,11 @@ export function setupWebSocket(server: http.Server): WebSocketServer {
           }
           case "kill_command": {
             if (activeCmdProc) {
-              try { activeCmdProc.kill(); } catch { /* already dead */ }
+              try {
+                activeCmdProc.kill();
+              } catch {
+                /* already dead */
+              }
               activeCmdProc = null;
               broadcast({ type: "cmd_out", msg: "\n[Terminal] Command aborted.\n" });
               broadcast({ type: "cmd_exit", code: -1 });
