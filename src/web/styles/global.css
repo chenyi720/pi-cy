@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./main.css";
 
 :root {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { connectWs, onWsMessage, startAgent, sendWs } from "./api/ws";
+import { connectWs, onWsMessage, startAgent, sendWs, sendChat } from "./api/ws";
 import {
   addAssistantMessageStart,
   updateAssistantMessage,
@@ -10,86 +10,172 @@ import {
   setError,
   clearMessages,
   loadSessionMessages,
+  addUserMessage,
 } from "./stores/chat";
 import { ChatPanel } from "./components/ChatPanel";
 import { ChatInput } from "./components/ChatInput";
-import { StatusBar } from "./components/StatusBar";
 import { FileTree } from "./components/FileTree";
 import { CodeEditor } from "./components/Editor";
-import { FileSearch } from "./components/FileSearch";
-import { Sidebar } from "./components/Sidebar";
 import { PermissionProvider, requestApproval } from "./components/PermissionDialog";
-import { GitChangesPanel } from "./components/GitChangesPanel";
 import { SessionHistory } from "./components/SessionHistory";
-import { useKeyBindings, KEYBINDINGS_HELP } from "./components/KeyBindings";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { useErrorHandler, ErrorToast } from "./components/ErrorToast";
-import { ImageGenerator } from "./components/ImageGenerator";
-import { ModelSelector } from "./components/ModelSelector";
-import { TerminalPanel } from "./components/TerminalPanel";
-import { ChangePanel } from "./components/ChangePanel";
-import { SkillManager } from "./components/SkillManager";
-import { McpSettings } from "./components/McpSettings";
-import { GitWorktreePanel } from "./components/GitWorktreePanel";
-import { PlanView } from "./components/PlanView";
-import { AgentPanel } from "./components/AgentPanel";
-import { TaskPanel } from "./components/TaskPanel";
-import { HookManager } from "./components/HookManager";
-import { WelcomeDashboard } from "./components/WelcomeDashboard";
 import { loadChanges } from "./stores/changes";
 import "./styles/themes.css";
 import "highlight.js/styles/github-dark.css";
 
-type SidebarTab = "files" | "search" | "git" | "sessions" | "image" | "skills" | "plans";
-
+/* ─── Types ─── */
 interface SessionTab {
   id: string;
   name: string;
   sessionPath?: string;
 }
 
+type NavView = "chat" | "history" | "plans" | "files" | "settings";
+type RightPanel = "files" | "changes" | null;
+
+/* ─── Session group mock data (for sidebar) ─── */
+interface SessionItem {
+  id: string;
+  title: string;
+  dot: string;
+  time: string;
+  changes?: string;
+  changesAgo?: string;
+}
+
+interface SessionGroup {
+  label: string;
+  items: SessionItem[];
+}
+
+const MOCK_SESSIONS: SessionGroup[] = [
+  {
+    label: "体育局相关",
+    items: [
+      {
+        id: "s1",
+        title: "学历证明PDF扫描件不完整",
+        dot: "bg-blue-500",
+        time: "8 小时前",
+        changes: "+14 -14",
+        changesAgo: "8 小时前",
+      },
+      {
+        id: "s2",
+        title: "Google 登录 EOF 网络问题排查",
+        dot: "bg-slate-300",
+        time: "4 天前",
+        changes: "+14 -14",
+        changesAgo: "4 天前",
+      },
+    ],
+  },
+  {
+    label: "外墙幕墙拆除",
+    items: [
+      {
+        id: "s3",
+        title: "施工方案太简单了，搞复杂一点，报价...",
+        dot: "bg-blue-500",
+        time: "1 小时前",
+      },
+      { id: "s4", title: "武汉大学写字楼玻璃拆除方案", dot: "bg-blue-500", time: "8 小时前" },
+    ],
+  },
+  {
+    label: "OBSERVER-SESSIONS",
+    items: [
+      {
+        id: "s5",
+        title: "--- MODE SWITCH: PROGRESS SUMMA...",
+        dot: "bg-slate-300",
+        time: "33 分钟前",
+      },
+      {
+        id: "s6",
+        title: "--- MODE SWITCH: PROGRESS SUMMA...",
+        dot: "bg-slate-300",
+        time: "42 分钟前",
+      },
+      {
+        id: "s7",
+        title: "--- MODE SWITCH: PROGRESS SUMMA...",
+        dot: "bg-slate-300",
+        time: "57 分钟前",
+      },
+      {
+        id: "s8",
+        title: "--- MODE SWITCH: PROGRESS SUMMA...",
+        dot: "bg-slate-300",
+        time: "1 小时前",
+      },
+      {
+        id: "s9",
+        title: "--- MODE SWITCH: PROGRESS SUMMA...",
+        dot: "bg-slate-300",
+        time: "1 小时前",
+      },
+      {
+        id: "s10",
+        title: "--- MODE SWITCH: PROGRESS SUMMA...",
+        dot: "bg-slate-300",
+        time: "1 小时前",
+      },
+    ],
+  },
+];
+
+/* ─── Custom section items ─── */
+interface CustomItem {
+  icon: string;
+  label: string;
+  count?: number;
+}
+
+const CUSTOM_ITEMS: CustomItem[] = [
+  { icon: "🤖", label: "智能体" },
+  { icon: "⚡", label: "技能", count: 10 },
+  { icon: "📋", label: "指令", count: 1 },
+  { icon: "🪝", label: "挂钩" },
+  { icon: "🔌", label: "MCP 服务器", count: 5 },
+];
+
+/* ══════════════════════════════════════════════════════════
+   APP
+   ══════════════════════════════════════════════════════════ */
 export default function App() {
   const assistantIdRef = useRef<string | null>(null);
   const streamContentRef = useRef("");
   const streamThinkingRef = useRef("");
   const [connected, setConnected] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("files");
-  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [navView, setNavView] = useState<NavView>("chat");
+  const [sidebarVisible] = useState(true);
+  const [rightPanel, setRightPanel] = useState<RightPanel>("files");
   const [openFile, setOpenFile] = useState<{ path: string; content: string } | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
   const [sessionTabs, setSessionTabs] = useState<SessionTab[]>([
     { id: "default", name: "Session 1" },
   ]);
   const [activeTabId, setActiveTabId] = useState("default");
   const [workspacePath, setWorkspacePath] = useState("");
-
-  // Bottom terminal states
-  const [terminalVisible, setTerminalVisible] = useState(false);
-  const [terminalHeight, setTerminalHeight] = useState(220);
-  const [terminalResizing, setTerminalResizing] = useState(false);
-
-  // Sub-tabs in Left Sidebar
-  const [orchestratorSubTab, setOrchestratorSubTab] = useState<
-    "plans" | "agents" | "tasks" | "hooks"
-  >("plans");
-  const [skillsSubTab, setSkillsSubTab] = useState<"skills" | "mcp">("skills");
+  const [chatStarted, setChatStarted] = useState(false);
+  const [sidebarCollapsedGroups, setSidebarCollapsedGroups] = useState<Set<string>>(new Set());
+  const [customExpanded, setCustomExpanded] = useState(true);
+  const [rightTab, setRightTab] = useState<"files" | "changes">("files");
 
   const { errors, addError, dismissError } = useErrorHandler();
 
-  // Dynamic page title based on active sidebar tab
   useEffect(() => {
-    const titles: Record<SidebarTab, string> = {
-      files: "PI-CY — 项目管理",
-      search: "PI-CY — 全局搜索",
-      git: "PI-CY — 源代码管理",
-      sessions: "PI-CY — 历史会话",
-      image: "PI-CY — ComfyUI 艺术画廊",
-      skills: "PI-CY — 技能与 MCP",
-      plans: "PI-CY — 协同编排",
+    const titles: Record<NavView, string> = {
+      chat: "PI-CY",
+      history: "PI-CY — 历史对话",
+      plans: "PI-CY — 计划任务",
+      files: "PI-CY — 文件浏览",
+      settings: "PI-CY — 设置",
     };
-    document.title = sidebarVisible ? titles[sidebarTab] || "PI-CY" : "PI-CY";
-  }, [sidebarTab, sidebarVisible]);
+    document.title = titles[navView] || "PI-CY";
+  }, [navView]);
 
   useEffect(() => {
     loadChanges();
@@ -122,6 +208,8 @@ export default function App() {
     const num = sessionTabs.length + 1;
     setSessionTabs((prev) => [...prev, { id, name: `Session ${num}` }]);
     setActiveTabId(id);
+    setNavView("chat");
+    setChatStarted(false);
     clearMessages();
     startAgent({
       provider: "xiaomi-token-plan-cn",
@@ -141,96 +229,22 @@ export default function App() {
         setSessionTabs((prev) => [...prev, { id, name, sessionPath }]);
         setActiveTabId(id);
         loadSessionMessages(data.messages);
+        setNavView("chat");
+        setChatStarted(true);
       }
     } catch {
       /* ignore */
     }
   }, []);
 
-  const handleCloseTab = useCallback(
-    (tabId: string) => {
-      if (sessionTabs.length <= 1) return;
-      setSessionTabs((prev) => prev.filter((t) => t.id !== tabId));
-      if (activeTabId === tabId) {
-        setActiveTabId(sessionTabs.find((t) => t.id !== tabId)?.id || "default");
-      }
-    },
-    [sessionTabs, activeTabId],
-  );
-
-  // Bottom terminal drag resizing
-  const handleTerminalMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setTerminalResizing(true);
-    const startY = e.clientY;
-    const startHeight = terminalHeight;
-
-    const onMouseMove = (ev: MouseEvent) => {
-      const delta = startY - ev.clientY;
-      setTerminalHeight(Math.min(500, Math.max(100, startHeight + delta)));
-    };
-
-    const onMouseUp = () => {
-      setTerminalResizing(false);
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    };
-
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-  };
-
-  // Keyboard shortcuts
-  useKeyBindings([
-    { key: "n", ctrl: true, action: handleNewSession, description: "New session" },
-    {
-      key: "b",
-      ctrl: true,
-      action: () => setSidebarVisible((v) => !v),
-      description: "Toggle sidebar",
-    },
-    {
-      key: "`",
-      ctrl: true,
-      action: () => setTerminalVisible((v) => !v),
-      description: "Toggle terminal",
-    },
-    {
-      key: "f",
-      ctrl: true,
-      shift: true,
-      action: () => {
-        setSidebarVisible(true);
-        setSidebarTab("search");
-      },
-      description: "Toggle search",
-    },
-    {
-      key: "g",
-      ctrl: true,
-      action: () => {
-        setSidebarVisible(true);
-        setSidebarTab("git");
-      },
-      description: "Toggle git changes",
-    },
-    {
-      key: "s",
-      ctrl: true,
-      shift: true,
-      action: () => {
-        setSidebarVisible(true);
-        setSidebarTab("sessions");
-      },
-      description: "Toggle sessions",
-    },
-    {
-      key: "/",
-      ctrl: true,
-      action: () => setShowHelp((v) => !v),
-      description: "Toggle help",
-    },
-  ]);
+  const toggleGroup = useCallback((label: string) => {
+    setSidebarCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }, []);
 
   // WebSocket connection
   useEffect(() => {
@@ -255,6 +269,7 @@ export default function App() {
           assistantIdRef.current = addAssistantMessageStart();
           streamContentRef.current = "";
           streamThinkingRef.current = "";
+          setChatStarted(true);
           break;
         }
         case "message_update": {
@@ -350,35 +365,11 @@ export default function App() {
     return unsub;
   }, [workspacePath, addError]);
 
-  const fileName = openFile?.path.split(/[/\\]/).pop() || "";
-
-  // Activity Bar Navigation Definition
-  const activityTabs: Array<{ id: SidebarTab; label: string; tooltip: string }> = [
-    { id: "files", label: "📁", tooltip: "文件浏览器" },
-    { id: "search", label: "🔍", tooltip: "全局内容搜索" },
-    { id: "git", label: "🌿", tooltip: "Git 源代码管理" },
-    { id: "plans", label: "📋", tooltip: "计划编排与多智能体 Swarm" },
-    { id: "skills", label: "⚡", tooltip: "沙盒技能与 MCP" },
-    { id: "image", label: "🖼️", tooltip: "ComfyUI 艺术生图" },
-    { id: "sessions", label: "📜", tooltip: "历史会话日志" },
-  ];
-
-  const handleActivityTabClick = (tabId: SidebarTab) => {
-    if (sidebarTab === tabId && sidebarVisible) {
-      setSidebarVisible(false);
-    } else {
-      setSidebarTab(tabId);
-      setSidebarVisible(true);
-    }
-  };
+  const projectName = workspacePath.split(/[/\\]/).pop() || "PI_agent-CY";
 
   return (
     <PermissionProvider>
-      <div
-        className="h-screen flex flex-col bg-[#F9FAFB] dark:bg-[#09090B] text-slate-900 dark:text-slate-100 selection:bg-blue-500/30"
-        style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
-      >
-        {/* Skip navigation for keyboard users */}
+      <div className="app-root">
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-blue-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg focus:outline-none"
@@ -386,387 +377,476 @@ export default function App() {
           跳转到主内容
         </a>
 
-        {/* Global Top Header */}
-        <div className="flex items-center justify-between px-3 py-1.5 bg-white/70 dark:bg-[#09090B]/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/5 shadow-sm z-40">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
-              PI-CY
+        {/* ═══ Window Title Bar (Tauri-style) ═══ */}
+        <div className="window-titlebar" data-tauri-drag-region>
+          <div className="titlebar-left">
+            <button className="titlebar-nav-btn" title="后退">←</button>
+            <button className="titlebar-nav-btn" title="前进">→</button>
+            <span className="titlebar-icon">✱</span>
+            <span className="titlebar-project">你好 {projectName}</span>
+            <span className="titlebar-sep">·</span>
+            <span className="titlebar-branch">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/>
+                <line x1="6" y1="9" x2="6" y2="21"/>
+              </svg>
+              main
             </span>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">v0.1.0</span>
-            <span className="h-4 w-[1px] bg-gray-200 dark:bg-gray-700 mx-1" />
-            <ModelSelector />
-
-            {/* Session tabs */}
-            <div className="flex ml-3 border border-gray-200/80 dark:border-gray-700/80 rounded overflow-hidden shadow-sm">
-              {sessionTabs.map((tab) => (
-                <div
-                  key={tab.id}
-                  className={`flex items-center px-3 py-1 text-xs cursor-pointer transition-all duration-200 rounded-md ${
-                    tab.id === activeTabId
-                      ? "bg-white dark:bg-zinc-800 text-slate-900 dark:text-slate-100 font-medium shadow-sm border border-slate-200/50 dark:border-white/10"
-                      : "bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-white/5"
-                  }`}
-                  onClick={() => setActiveTabId(tab.id)}
-                >
-                  <span className="max-w-[80px] truncate">{tab.name}</span>
-                  {sessionTabs.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCloseTab(tab.id);
-                      }}
-                      className="ml-1.5 text-[9px] opacity-60 hover:opacity-100 transition-opacity"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                onClick={handleNewSession}
-                className="px-2 py-0.5 text-xs bg-gray-100/60 dark:bg-gray-800/60 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 transition-colors"
-                title="新建会话 (Ctrl+N)"
-              >
-                +
-              </button>
-            </div>
           </div>
-
-          <div className="flex items-center gap-3 text-xs text-gray-400">
-            <ThemeToggle />
-            <button
-              onClick={() => setShowHelp((v) => !v)}
-              className="hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-              title="快捷键帮助 (Ctrl+/)"
-            >
-              快捷键
+          <div className="titlebar-right">
+            <button className="titlebar-ctrl-btn" title="终端">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
             </button>
-            <span className="h-3 w-[1px] bg-gray-200 dark:bg-gray-700" />
-            <span
-              className={`w-2 h-2 rounded-full ${connected ? "bg-green-500 animate-pulse" : "bg-red-500"}`}
-            />
-            <span className="text-gray-500 dark:text-gray-400 font-medium">
-              {connected ? "已连接" : "未连接"}
-            </span>
+            <button className="titlebar-ctrl-btn" title="运行">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <button className="titlebar-ctrl-btn" title="下拉">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 3l3 3 3-3"/></svg>
+            </button>
+            <button className="titlebar-ctrl-btn" title="面板">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+            </button>
+            <button className="titlebar-ctrl-btn titlebar-settings" title="设置">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+            <div className="titlebar-divider" />
+            <button className="titlebar-ctrl-btn" title="最小化">—</button>
+            <button className="titlebar-ctrl-btn" title="最大化">□</button>
+            <button className="titlebar-ctrl-btn titlebar-close" title="关闭">✕</button>
           </div>
         </div>
 
-        {/* Global Keyboard Shortcut Helper Overlay */}
-        {showHelp && (
-          <div
-            className="absolute top-12 right-4 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-72 space-y-3"
-            onClick={() => setShowHelp(false)}
-          >
-            <div className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-              键盘快捷键
-            </div>
-            <div className="space-y-1.5">
-              {KEYBINDINGS_HELP.map((h) => (
-                <div
-                  key={h.key}
-                  className="flex justify-between items-center py-0.5 text-xs border-b border-gray-100 dark:border-gray-800/50 last:border-0 pb-1"
-                >
-                  <span className="font-semibold text-gray-600 dark:text-gray-300 font-mono bg-gray-50 dark:bg-gray-800 px-1 py-0.5 rounded border border-gray-200/55 dark:border-gray-700/50">
-                    {h.key}
-                  </span>
-                  <span className="text-gray-500 dark:text-gray-400">{h.description}</span>
-                </div>
-              ))}
-              <div className="flex justify-between items-center py-0.5 text-xs">
-                <span className="font-semibold text-gray-600 dark:text-gray-300 font-mono bg-gray-50 dark:bg-gray-800 px-1 py-0.5 rounded border border-gray-200/55 dark:border-gray-700/50">
-                  Ctrl + `
-                </span>
-                <span className="text-gray-500 dark:text-gray-400">折叠/展开底部终端</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Body Viewport */}
-        <div id="main-content" className="flex-1 flex overflow-hidden" tabIndex={-1}>
-          {/* 1. Far-Left Activity Bar (48px) */}
-          <div className="activity-bar">
-            <div className="activity-btn-group">
-              {activityTabs.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => handleActivityTabClick(t.id)}
-                  title={t.tooltip}
-                  className={`activity-btn ${sidebarTab === t.id && sidebarVisible ? "active" : ""}`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-col gap-3 items-center mb-2">
-              <button
-                onClick={() => setTerminalVisible((v) => !v)}
-                title="折叠/展开终端"
-                className={`activity-btn ${terminalVisible ? "active" : ""}`}
-              >
-                💻
-              </button>
-            </div>
-          </div>
-
-          {/* 2. Left Collapsible resizable sidebar (250px) */}
+        <div className="app-layout" id="main-content" tabIndex={-1}>
+          {/* ═══ LEFT SIDEBAR ═══ */}
           {sidebarVisible && (
-            <Sidebar side="left" defaultWidth={260}>
-              <div className="h-full flex flex-col overflow-hidden bg-white/50 dark:bg-zinc-900/30 backdrop-blur-2xl">
-                {/* Sidebar Active Tab Title */}
-                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                    {sidebarTab === "files"
-                      ? "项目管理器"
-                      : sidebarTab === "search"
-                        ? "全局搜索"
-                        : sidebarTab === "git"
-                          ? "源代码管理"
-                          : sidebarTab === "plans"
-                            ? "协同编排画布"
-                            : sidebarTab === "skills"
-                              ? "开发者沙盒"
-                              : sidebarTab === "image"
-                                ? "ComfyUI 艺术画廊"
-                                : "历史会话日志"}
-                  </span>
+            <aside className="sidebar-left">
+              <div className="sidebar-left-header">
+                <span className="sidebar-left-title">会话</span>
+                <div className="sidebar-left-actions">
                   <button
-                    onClick={() => setSidebarVisible(false)}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-[10px]"
-                    title="收起侧边栏"
+                    onClick={handleNewSession}
+                    className="sidebar-new-btn"
+                    title="新建对话 (Ctrl+N)"
                   >
-                    ◀
+                    新 <kbd>Ctrl+N</kbd>
+                  </button>
+                  <button className="sidebar-icon-btn" title="筛选">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                    </svg>
+                  </button>
+                  <button className="sidebar-icon-btn" title="搜索">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
                   </button>
                 </div>
+              </div>
 
-                {/* Sidebar Inner Scroll Content */}
-                <div className="flex-1 overflow-y-auto">
-                  {sidebarTab === "files" && (
-                    <div className="flex flex-col h-full">
-                      <div className="flex-1 overflow-y-auto min-h-0">
-                        <FileTree rootPath={workspacePath} onFileClick={handleFileClick} />
-                      </div>
-                      <div className="border-t border-gray-200 dark:border-gray-800 p-2">
-                        <GitWorktreePanel />
-                      </div>
-                    </div>
-                  )}
-                  {sidebarTab === "search" && (
-                    <FileSearch rootPath={workspacePath} onResultClick={handleFileClick} />
-                  )}
-                  {sidebarTab === "git" && (
-                    <div className="flex flex-col gap-2 p-2">
-                      <GitChangesPanel onFileClick={handleFileClick} />
-                      <ChangePanel onFileClick={handleFileClick} />
-                      <GitWorktreePanel />
-                    </div>
-                  )}
-                  {sidebarTab === "sessions" && (
-                    <SessionHistory
-                      onLoadSession={handleLoadSession}
-                      currentSessionPath={
-                        sessionTabs.find((t) => t.id === activeTabId)?.sessionPath
-                      }
-                    />
-                  )}
-                  {sidebarTab === "image" && <ImageGenerator />}
-
-                  {/* Skills Sub-Tab container */}
-                  {sidebarTab === "skills" && (
-                    <div className="h-full flex flex-col">
-                      <div className="flex border-b border-gray-200 dark:border-gray-800 p-1.5 gap-1 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
-                        <button
-                          onClick={() => setSkillsSubTab("skills")}
-                          className={`flex-1 py-1 text-xs font-semibold rounded-lg transition-all ${
-                            skillsSubTab === "skills"
-                              ? "bg-blue-600 text-white shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40"
-                          }`}
-                        >
-                          自定义技能
-                        </button>
-                        <button
-                          onClick={() => setSkillsSubTab("mcp")}
-                          className={`flex-1 py-1 text-xs font-semibold rounded-lg transition-all ${
-                            skillsSubTab === "mcp"
-                              ? "bg-blue-600 text-white shadow-sm"
-                              : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40"
-                          }`}
-                        >
-                          MCP 服务
-                        </button>
-                      </div>
-                      <div className="flex-1 overflow-y-auto min-h-0">
-                        {skillsSubTab === "skills" ? <SkillManager /> : <McpSettings />}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Plan / Swarm Sub-Tab container */}
-                  {sidebarTab === "plans" && (
-                    <div className="h-full flex flex-col">
-                      <div className="flex flex-wrap border-b border-gray-200 dark:border-gray-800 p-1 gap-0.5 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
-                        {(["plans", "agents", "tasks", "hooks"] as const).map((sub) => (
+              <div className="sidebar-left-scroll">
+                {MOCK_SESSIONS.map((group) => (
+                  <div key={group.label} className="session-group">
+                    <button
+                      className="session-group-header"
+                      onClick={() => toggleGroup(group.label)}
+                    >
+                      <svg
+                        className={`session-group-chevron ${sidebarCollapsedGroups.has(group.label) ? "collapsed" : ""}`}
+                        width="10"
+                        height="10"
+                        viewBox="0 0 10 10"
+                        fill="currentColor"
+                      >
+                        <path d="M3 2l4 3-4 3V2z" />
+                      </svg>
+                      <span>{group.label}</span>
+                    </button>
+                    {!sidebarCollapsedGroups.has(group.label) && (
+                      <div className="session-group-items">
+                        {group.items.map((item) => (
                           <button
-                            key={sub}
-                            onClick={() => setOrchestratorSubTab(sub)}
-                            className={`flex-1 py-1 text-[10px] font-semibold rounded-lg transition-all capitalize truncate ${
-                              orchestratorSubTab === sub
-                                ? "bg-blue-600 text-white shadow-sm"
-                                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40"
-                            }`}
-                            title={sub}
+                            key={item.id}
+                            className={`session-item ${item.id === activeTabId ? "active" : ""}`}
+                            onClick={() => {
+                              setActiveTabId(item.id);
+                              setNavView("chat");
+                              setChatStarted(true);
+                            }}
                           >
-                            {sub === "plans"
-                              ? "计划"
-                              : sub === "agents"
-                                ? "协同"
-                                : sub === "tasks"
-                                  ? "清单"
-                                  : "事件"}
+                            <span className={`session-dot ${item.dot}`} />
+                            <div className="session-item-content">
+                              <span className="session-item-title">{item.title}</span>
+                              {item.changes && (
+                                <span className="session-item-changes">
+                                  <svg
+                                    width="10"
+                                    height="10"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  >
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                  </svg>
+                                  {item.changes} · {item.changesAgo}
+                                </span>
+                              )}
+                            </div>
                           </button>
                         ))}
                       </div>
-                      <div className="flex-1 overflow-y-auto min-h-0">
-                        {orchestratorSubTab === "plans" && <PlanView />}
-                        {orchestratorSubTab === "agents" && <AgentPanel />}
-                        {orchestratorSubTab === "tasks" && <TaskPanel />}
-                        {orchestratorSubTab === "hooks" && <HookManager />}
+                    )}
+                  </div>
+                ))}
+
+                <div className="sidebar-more-hint">+ 另外 152 个</div>
+
+                <div className="sidebar-project-section">
+                  <button className="session-group-header" onClick={() => setNavView("files")}>
+                    <svg
+                      className="session-group-chevron"
+                      width="10"
+                      height="10"
+                      viewBox="0 0 10 10"
+                      fill="currentColor"
+                    >
+                      <path d="M3 2l4 3-4 3V2z" />
+                    </svg>
+                    <span className="sidebar-project-name">{projectName.toUpperCase()}</span>
+                  </button>
+                  {/* Active sessions under this project */}
+                  <div className="session-group-items">
+                    {chatStarted && (
+                      <div className="session-item active">
+                        <span className="session-dot bg-blue-500" />
+                        <div className="session-item-content">
+                          <span className="session-item-title">你好</span>
+                          <span className="session-item-subtitle">
+                            正在工作
+                            <span className="pulse-dot" />
+                            <span className="pulse-dot" />
+                            <span className="pulse-dot" />
+                          </span>
+                        </div>
                       </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sidebar-custom-section">
+                  <button
+                    className="sidebar-custom-header"
+                    onClick={() => setCustomExpanded(!customExpanded)}
+                  >
+                    <span>自定义</span>
+                    <svg
+                      className={`session-group-chevron ${customExpanded ? "" : "collapsed"}`}
+                      width="10"
+                      height="10"
+                      viewBox="0 0 10 10"
+                      fill="currentColor"
+                    >
+                      <path d="M3 2l4 3-4 3V2z" />
+                    </svg>
+                  </button>
+                  {customExpanded && (
+                    <div className="sidebar-custom-items">
+                      {CUSTOM_ITEMS.map((item) => (
+                        <button key={item.label} className="custom-item">
+                          <span className="custom-item-icon">{item.icon}</span>
+                          <span className="custom-item-label">{item.label}</span>
+                          {item.count !== undefined && (
+                            <span className="custom-item-count">{item.count}</span>
+                          )}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
-            </Sidebar>
+
+              {/* Sidebar footer */}
+              <div className="sidebar-left-footer">
+                <ThemeToggle />
+                <div className="sidebar-status-row">
+                  <span
+                    className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-500" : "bg-red-500"}`}
+                  />
+                  <span className="text-[10px] text-slate-400">
+                    {connected ? "已连接" : "未连接"}
+                  </span>
+                </div>
+              </div>
+            </aside>
           )}
 
-          {/* 3. Center Workspace Area (Monaco Editor & Collapsible terminal) */}
-          <div className="flex-1 flex flex-col min-w-0 bg-white/60 dark:bg-[#09090B]/60 backdrop-blur-md relative shadow-[-4px_0_24px_rgba(0,0,0,0.02)] dark:shadow-[-4px_0_24px_rgba(0,0,0,0.2)] z-10">
-            {/* Editor viewport or Welcome dashboard */}
-            <div className="flex-1 flex flex-col relative min-h-0 overflow-hidden">
-              {openFile ? (
-                <div className="h-full flex flex-col">
-                  {/* File Tab Header */}
-                  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-semibold text-blue-500 dark:text-blue-400 font-mono select-none">
-                        📄
-                      </span>
-                      <span className="text-xs font-mono text-gray-700 dark:text-gray-200 truncate select-all">
-                        {fileName}
-                      </span>
+          {/* ═══ CENTER MAIN ═══ */}
+          <main className="center-main">
+            {openFile ? (
+              <div className="flex-1 flex flex-col h-full">
+                <div className="editor-top-bar">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-blue-500 font-mono">📄</span>
+                    <span className="text-xs font-mono text-slate-700 truncate">
+                      {openFile.path.split(/[/\\]/).pop()}
+                    </span>
+                  </div>
+                  <button onClick={() => setOpenFile(null)} className="editor-close-btn">
+                    ✕
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0">
+                  {fileLoading ? (
+                    <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                      <span className="animate-spin mr-2">⏳</span> 加载中...
                     </div>
-                    <button
-                      onClick={() => setOpenFile(null)}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs ml-2 hover:bg-gray-200/50 dark:hover:bg-gray-800/50 w-5 h-5 rounded flex items-center justify-center transition-colors"
-                      title="关闭编辑器"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  {/* Code Editor block */}
-                  <div className="flex-1 min-h-0 relative">
-                    {fileLoading ? (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-sm bg-white/60 dark:bg-gray-950/60">
-                        <span className="animate-spin mr-2">⏳</span> 加载源码中...
-                      </div>
-                    ) : (
-                      <CodeEditor
-                        filePath={openFile.path}
-                        content={openFile.content}
-                        readOnly={false}
-                      />
-                    )}
-                  </div>
+                  ) : (
+                    <CodeEditor
+                      filePath={openFile.path}
+                      content={openFile.content}
+                      readOnly={false}
+                    />
+                  )}
                 </div>
-              ) : (
-                <WelcomeDashboard
-                  workspacePath={workspacePath}
-                  onTabSelect={(tab, subTab) => {
-                    setSidebarTab(tab);
-                    setSidebarVisible(true);
-                    if (tab === "plans" && subTab) {
-                      setOrchestratorSubTab(subTab as any);
-                    }
-                    if (tab === "skills" && subTab) {
-                      setSkillsSubTab(subTab as any);
-                    }
-                  }}
-                  onNewSession={handleNewSession}
-                  toggleHelp={() => setShowHelp((v) => !v)}
-                  toggleTerminal={() => setTerminalVisible((v) => !v)}
+              </div>
+            ) : navView === "history" ? (
+              <div className="flex-1 overflow-y-auto p-4">
+                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">
+                  历史对话
+                </h2>
+                <SessionHistory
+                  onLoadSession={handleLoadSession}
+                  currentSessionPath={sessionTabs.find((t) => t.id === activeTabId)?.sessionPath}
                 />
-              )}
-            </div>
-
-            {/* Collapsible Bottom Terminal */}
-            {terminalVisible && (
-              <div className="bottom-terminal-container" style={{ height: `${terminalHeight}px` }}>
-                {/* Resizing mouse handle */}
-                <div
-                  className={`bottom-terminal-resizer ${terminalResizing ? "active" : ""}`}
-                  onMouseDown={handleTerminalMouseDown}
-                />
-
-                {/* Terminal Header */}
-                <div className="flex items-center justify-between px-3 py-1 bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-150 dark:border-gray-800 select-none">
-                  <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                    SYSTEM SHELL TERMINAL
+              </div>
+            ) : navView === "files" ? (
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-3 border-b border-slate-200/50 dark:border-white/5">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    文件浏览
                   </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setTerminalHeight(220)}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-[10px] px-1 hover:bg-gray-200/50 dark:hover:bg-gray-850"
-                      title="重置高度"
+                </div>
+                <FileTree rootPath={workspacePath} onFileClick={handleFileClick} />
+              </div>
+            ) : navView === "plans" ? (
+              <div className="flex-1 overflow-y-auto p-4">
+                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">
+                  计划任务
+                </h2>
+                <p className="text-sm text-slate-500">计划功能开发中...</p>
+              </div>
+            ) : !chatStarted ? (
+              /* ══ Welcome Screen ══ */
+              /* ══ Welcome Screen ══ */
+              <div className="welcome-screen">
+                <div className="welcome-header">
+                  <span className="welcome-loc-text">新会话位于</span>
+                  <button className="welcome-badge" onClick={() => setRightPanel("files")}>
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     >
-                      ⟲
-                    </button>
-                    <button
-                      onClick={() => setTerminalVisible(false)}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs font-bold leading-none hover:bg-gray-200/50 dark:hover:bg-gray-850 w-4 h-4 rounded flex items-center justify-center"
-                      title="收起终端"
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    </svg>
+                    {projectName}
+                    <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" opacity="0.4">
+                      <path d="M3 2l4 3-4 3V2z" />
+                    </svg>
+                  </button>
+                  <span className="welcome-loc-text">使用</span>
+                  <button className="welcome-badge">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
                     >
-                      ✕
-                    </button>
-                  </div>
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                    </svg>
+                    Claude
+                    <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" opacity="0.4">
+                      <path d="M3 2l4 3-4 3V2z" />
+                    </svg>
+                  </button>
                 </div>
 
-                <div className="flex-1 relative min-h-0 overflow-hidden bg-gray-950">
-                  <TerminalPanel />
+                <div className="welcome-input-area">
+                  <div className="welcome-input-box">
+                    <textarea
+                      className="welcome-textarea"
+                      placeholder="你今天要发布什么？"
+                      rows={1}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          const target = e.target as HTMLTextAreaElement;
+                          const val = target.value.trim();
+                          if (val) {
+                            addUserMessage(val);
+                            sendChat(val);
+                            target.value = "";
+                            setChatStarted(true);
+                          }
+                        }
+                      }}
+                    />
+                    <div className="welcome-input-footer">
+                      <div className="welcome-input-left">
+                        <button className="welcome-plus-btn" title="添加附件">
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                          </svg>
+                        </button>
+                        <div className="welcome-model-pill">
+                          <span>Claude Haiku 4.5</span>
+                        </div>
+                      </div>
+                      <button className="welcome-send-btn" title="发送" disabled>
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <line x1="12" y1="19" x2="12" y2="5" />
+                          <polyline points="5 12 12 5 19 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="welcome-auto-edit">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                    <span>自动编辑</span>
+                  </div>
                 </div>
+              </div>
+            ) : (
+              /* ══ Active Chat ══ */
+              <div className="chat-active-area">
+                <ChatPanel />
+                <ChatInput />
               </div>
             )}
-          </div>
+          </main>
 
-          {/* 4. Right Collapsible resizable AI Chat sidebar (380px) */}
-          <Sidebar side="right" defaultWidth={380} minWidth={280} maxWidth={600}>
-            <div className="h-full flex flex-col bg-white/70 dark:bg-zinc-900/50 backdrop-blur-2xl shadow-[-8px_0_32px_rgba(0,0,0,0.03)] dark:shadow-[-8px_0_32px_rgba(0,0,0,0.2)] z-20">
-              {/* Chat Titlebar Header inside Sidebar */}
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-150 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 select-none">
-                <span className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                  AI 智能体助手
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`}
-                  />
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 font-semibold">
-                    {connected ? "在线就绪" : "断开连接"}
-                  </span>
+          {/* ═══ RIGHT PANEL ═══ */}
+          {rightPanel && (
+            <aside className="sidebar-right">
+              <div className="right-panel-tabs">
+                <button
+                  className={`right-tab ${rightTab === "changes" ? "active" : ""}`}
+                  onClick={() => setRightTab("changes")}
+                >
+                  更改
+                </button>
+                <button
+                  className={`right-tab ${rightTab === "files" ? "active" : ""}`}
+                  onClick={() => setRightTab("files")}
+                >
+                  文件
+                </button>
+                <div className="right-tab-actions">
+                  <button className="sidebar-icon-btn" title="搜索文件">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                  </button>
+                  <button className="sidebar-icon-btn" title="更多操作">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="1" />
+                      <circle cx="19" cy="12" r="1" />
+                      <circle cx="5" cy="12" r="1" />
+                    </svg>
+                  </button>
                 </div>
               </div>
-
-              {/* Chat Content & Input Panels */}
-              <ChatPanel />
-              <ChatInput />
-            </div>
-          </Sidebar>
+              <div className="right-panel-content">
+                {rightTab === "files" ? (
+                  <FileTree rootPath={workspacePath} onFileClick={handleFileClick} />
+                ) : (
+                  <div className="right-changes-empty">
+                    <span className="text-xs text-slate-400">暂无更改</span>
+                  </div>
+                )}
+              </div>
+            </aside>
+          )}
         </div>
 
-        {/* Global bottom Status Bar */}
-        <StatusBar />
-
-        {/* Global Toast Error Notifications */}
         <ErrorToast errors={errors} onDismiss={dismissError} />
       </div>
     </PermissionProvider>
